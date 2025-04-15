@@ -13,21 +13,28 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/auth-context";
 import MainNav from "./main-nav";
-import { FaUser } from "react-icons/fa";
+import { FaUser, FaGraduationCap } from "react-icons/fa";
 
 export default function Header() {
   const { user, logout } = useAuth();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
       <div className="container flex h-16 items-center">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-xl font-bold text-primary">
+        <Link href="/" className="flex items-center gap-2 mr-6">
+          <FaGraduationCap className="h-6 w-6 text-primary" />
+          <span className="text-xl font-bold text-primary hidden md:inline-block">
             French Institute
           </span>
+          <span className="text-xl font-bold text-primary md:hidden">FI</span>
         </Link>
         <MainNav />
         <div className="ml-auto flex items-center gap-4">
+          {!user && (
+            <Link href="/courses" className="text-sm font-medium text-muted-foreground hover:text-primary hidden md:inline-block">
+              Explore Courses
+            </Link>
+          )}
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -37,8 +44,8 @@ export default function Header() {
                       src={user.photoURL || ""}
                       alt={user.displayName || ""}
                     />
-                    <AvatarFallback>
-                      <FaUser />
+                    <AvatarFallback className="bg-primary/10">
+                      <FaUser className="h-4 w-4 text-primary" />
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -70,7 +77,7 @@ export default function Header() {
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="cursor-pointer"
+                  className="cursor-pointer text-red-600 focus:text-red-600"
                   onClick={() => logout()}
                 >
                   Log out
@@ -79,10 +86,10 @@ export default function Header() {
             </DropdownMenu>
           ) : (
             <>
-              <Button variant="ghost" asChild>
+              <Button variant="ghost" asChild className="text-sm hidden sm:flex">
                 <Link href="/auth/login">Login</Link>
               </Button>
-              <Button asChild>
+              <Button asChild className="bg-primary hover:bg-primary/90">
                 <Link href="/auth/register">Register</Link>
               </Button>
             </>
