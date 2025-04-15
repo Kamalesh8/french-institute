@@ -1,254 +1,354 @@
 import { db } from '@/config/firebase';
-import type { Enrollment, EnrollmentStatus, ProgressStatus } from '@/lib/types';
 import {
   collection,
   doc,
   getDoc,
   getDocs,
+  query,
+  where,
   addDoc,
   updateDoc,
   deleteDoc,
-  query,
-  where,
-  orderBy,
-  serverTimestamp,
-  Timestamp,
-  limit
+  serverTimestamp
 } from 'firebase/firestore';
-import { updateCourseEnrollment } from './course-service';
+import type { Enrollment, EnrollmentStatus } from '@/lib/types';
+
+// Check if we're in demo mode
+const isDemoMode = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes('DEMO') ||
+                  process.env.NEXT_PUBLIC_FIREBASE_API_KEY === undefined;
+
+// Import demo data if in demo mode
+let demoEnrollmentsData: Enrollment[] = [];
+if (isDemoMode) {
+  try {
+    if (typeof window !== 'undefined') {
+      // In the browser, fetch the data
+      fetch('/api/demo/enrollments')
+        .then(res => res.json())
+        .then(data => {
+          demoEnrollmentsData = data;
+        })
+        .catch(err => {
+          console.error('Error loading demo enrollments data:', err);
+        });
+    } else {
+      // In Node.js - for SSR
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const dataPath = path.join(process.cwd(), 'src/data/enrollments.json');
+        if (fs.existsSync(dataPath)) {
+          const rawData = fs.readFileSync(dataPath, 'utf8');
+          demoEnrollmentsData = JSON.parse(rawData);
+        }
+      } catch (e) {
+        console.error('Error loading server-side demo enrollment data:', e);
+      }
+    }
+  } catch (e) {
+    console.error('Error initializing demo enrollments data:', e);
+  }
+}
 
 const ENROLLMENTS_COLLECTION = 'enrollments';
 
-// Get enrollments for a specific user
-export const getUserEnrollments = async (userId: string) => {
-  const q = query(
-    collection(db, ENROLLMENTS_COLLECTION),
-    where('userId', '==', userId),
-    orderBy('enrollmentDate', 'desc')
-  );
+export const createEnrollment = async (enrollmentData: Omit<Enrollment, 'id' | 'createdAt' | 'updatedAt'>) => {
+  if (isDemoMode) {
+    console.log('Creating demo enrollment (simulated):', enrollmentData.courseId);
 
-  const querySnapshot = await getDocs(q);
-  const enrollments: Enrollment[] = [];
+    const newEnrollment: Enrollment = {
+      id: `demo-enrollment-${Date.now()}`,
+      ...enrollmentData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
 
-  for (const doc of querySnapshot.docs) {
-    const data = doc.data();
-    enrollments.push({
-      id: doc.id,
-      ...data,
-      createdAt: data.createdAt?.toDate?.() ? data.createdAt.toDate().toISOString() : data.createdAt,
-      updatedAt: data.updatedAt?.toDate?.() ? data.updatedAt.toDate().toISOString() : data.updatedAt,
-      enrollmentDate: data.enrollmentDate?.toDate?.() ? data.enrollmentDate.toDate().toISOString() : data.enrollmentDate,
-      paymentDate: data.paymentDate?.toDate?.() ? data.paymentDate.toDate().toISOString() : data.paymentDate,
-      completionDate: data.completionDate?.toDate?.() ? data.completionDate.toDate().toISOString() : data.completionDate,
-      certificateIssueDate: data.certificateIssueDate?.toDate?.() ? data.certificateIssueDate.toDate().toISOString() : data.certificateIssueDate,
-    } as Enrollment);
+    // Add to demo data
+    demoEnrollmentsData = [...demoEnrollmentsData, newEnrollment];
+
+    return newEnrollment;
   }
 
-  return enrollments;
-};
+  try {
+    const newEnrollment = {
+      ...enrollmentData,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    };
 
-// Get enrollments for a specific course
-export const getCourseEnrollments = async (courseId: string) => {
-  const q = query(
-    collection(db, ENROLLMENTS_COLLECTION),
-    where('courseId', '==', courseId),
-    orderBy('enrollmentDate', 'desc')
-  );
-
-  const querySnapshot = await getDocs(q);
-  const enrollments: Enrollment[] = [];
-
-  for (const doc of querySnapshot.docs) {
-    const data = doc.data();
-    enrollments.push({
-      id: doc.id,
-      ...data,
-      createdAt: data.createdAt?.toDate?.() ? data.createdAt.toDate().toISOString() : data.createdAt,
-      updatedAt: data.updatedAt?.toDate?.() ? data.updatedAt.toDate().toISOString() : data.updatedAt,
-      enrollmentDate: data.enrollmentDate?.toDate?.() ? data.enrollmentDate.toDate().toISOString() : data.enrollmentDate,
-      paymentDate: data.paymentDate?.toDate?.() ? data.paymentDate.toDate().toISOString() : data.paymentDate,
-      completionDate: data.completionDate?.toDate?.() ? data.completionDate.toDate().toISOString() : data.completionDate,
-      certificateIssueDate: data.certificateIssueDate?.toDate?.() ? data.certificateIssueDate.toDate().toISOString() : data.certificateIssueDate,
-    } as Enrollment);
+    const enrollmentRef = await addDoc(collection(db, ENROLLMENTS_COLLECTION), newEnrollment);
+    return { id: enrollmentRef.id, ...enrollmentData } as Enrollment;
+  } catch (error) {
+    console.error('Error creating enrollment:', error);
+    throw error;
   }
-
-  return enrollments;
 };
 
-// Get a specific enrollment by ID
 export const getEnrollmentById = async (enrollmentId: string) => {
-  const enrollmentRef = doc(db, ENROLLMENTS_COLLECTION, enrollmentId);
-  const enrollmentSnap = await getDoc(enrollmentRef);
-
-  if (enrollmentSnap.exists()) {
-    const data = enrollmentSnap.data();
-    return {
-      id: enrollmentSnap.id,
-      ...data,
-      createdAt: data.createdAt?.toDate?.() ? data.createdAt.toDate().toISOString() : data.createdAt,
-      updatedAt: data.updatedAt?.toDate?.() ? data.updatedAt.toDate().toISOString() : data.updatedAt,
-      enrollmentDate: data.enrollmentDate?.toDate?.() ? data.enrollmentDate.toDate().toISOString() : data.enrollmentDate,
-      paymentDate: data.paymentDate?.toDate?.() ? data.paymentDate.toDate().toISOString() : data.paymentDate,
-      completionDate: data.completionDate?.toDate?.() ? data.completionDate.toDate().toISOString() : data.completionDate,
-      certificateIssueDate: data.certificateIssueDate?.toDate?.() ? data.certificateIssueDate.toDate().toISOString() : data.certificateIssueDate,
-    } as Enrollment;
+  if (isDemoMode) {
+    console.log('Getting demo enrollment by ID:', enrollmentId);
+    return demoEnrollmentsData.find(e => e.id === enrollmentId) || null;
   }
 
-  return null;
+  try {
+    const enrollmentRef = doc(db, ENROLLMENTS_COLLECTION, enrollmentId);
+    const enrollmentSnap = await getDoc(enrollmentRef);
+
+    if (enrollmentSnap.exists()) {
+      const data = enrollmentSnap.data();
+      return {
+        id: enrollmentSnap.id,
+        ...data,
+        createdAt: data.createdAt?.toDate?.() ? data.createdAt.toDate().toISOString() : data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+        enrollmentDate: data.enrollmentDate?.toDate?.() ? data.enrollmentDate.toDate().toISOString() : data.enrollmentDate,
+        paymentDate: data.paymentDate?.toDate?.() ? data.paymentDate.toDate().toISOString() : data.paymentDate,
+        completionDate: data.completionDate?.toDate?.() ? data.completionDate.toDate().toISOString() : data.completionDate,
+        certificateIssueDate: data.certificateIssueDate?.toDate?.() ? data.certificateIssueDate.toDate().toISOString() : data.certificateIssueDate,
+      } as Enrollment;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error getting enrollment by ID:', error);
+    throw error;
+  }
 };
 
-// Check if a user is already enrolled in a course
+export const getUserEnrollments = async (userId: string) => {
+  if (isDemoMode) {
+    console.log('Getting demo enrollments for user:', userId);
+    return demoEnrollmentsData.filter(e => e.userId === userId);
+  }
+
+  try {
+    const q = query(collection(db, ENROLLMENTS_COLLECTION), where('userId', '==', userId));
+    const querySnapshot = await getDocs(q);
+
+    const enrollments: Enrollment[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      enrollments.push({
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate?.() ? data.createdAt.toDate().toISOString() : data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+        enrollmentDate: data.enrollmentDate?.toDate?.() ? data.enrollmentDate.toDate().toISOString() : data.enrollmentDate,
+        paymentDate: data.paymentDate?.toDate?.() ? data.paymentDate.toDate().toISOString() : data.paymentDate,
+        completionDate: data.completionDate?.toDate?.() ? data.completionDate.toDate().toISOString() : data.completionDate,
+        certificateIssueDate: data.certificateIssueDate?.toDate?.() ? data.certificateIssueDate.toDate().toISOString() : data.certificateIssueDate,
+      } as Enrollment);
+    });
+
+    return enrollments;
+  } catch (error) {
+    console.error('Error getting user enrollments:', error);
+    throw error;
+  }
+};
+
+export const getCourseEnrollments = async (courseId: string) => {
+  if (isDemoMode) {
+    console.log('Getting demo enrollments for course:', courseId);
+    return demoEnrollmentsData.filter(e => e.courseId === courseId);
+  }
+
+  try {
+    const q = query(collection(db, ENROLLMENTS_COLLECTION), where('courseId', '==', courseId));
+    const querySnapshot = await getDocs(q);
+
+    const enrollments: Enrollment[] = [];
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      enrollments.push({
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toDate?.() ? data.createdAt.toDate().toISOString() : data.createdAt,
+        updatedAt: data.updatedAt?.toDate?.() ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+        enrollmentDate: data.enrollmentDate?.toDate?.() ? data.enrollmentDate.toDate().toISOString() : data.enrollmentDate,
+        paymentDate: data.paymentDate?.toDate?.() ? data.paymentDate.toDate().toISOString() : data.paymentDate,
+        completionDate: data.completionDate?.toDate?.() ? data.completionDate.toDate().toISOString() : data.completionDate,
+        certificateIssueDate: data.certificateIssueDate?.toDate?.() ? data.certificateIssueDate.toDate().toISOString() : data.certificateIssueDate,
+      } as Enrollment);
+    });
+
+    return enrollments;
+  } catch (error) {
+    console.error('Error getting course enrollments:', error);
+    throw error;
+  }
+};
+
+export const updateEnrollment = async (enrollmentId: string, enrollmentData: Partial<Enrollment>) => {
+  if (isDemoMode) {
+    console.log('Updating demo enrollment (simulated):', enrollmentId);
+
+    const enrollmentIndex = demoEnrollmentsData.findIndex(e => e.id === enrollmentId);
+
+    if (enrollmentIndex !== -1) {
+      const updatedEnrollment = {
+        ...demoEnrollmentsData[enrollmentIndex],
+        ...enrollmentData,
+        updatedAt: new Date().toISOString()
+      };
+
+      // Update demo data
+      demoEnrollmentsData[enrollmentIndex] = updatedEnrollment;
+
+      return updatedEnrollment;
+    }
+
+    return null;
+  }
+
+  try {
+    const enrollmentRef = doc(db, ENROLLMENTS_COLLECTION, enrollmentId);
+
+    // Create updated enrollment data
+    const updates = {
+      ...enrollmentData,
+      updatedAt: serverTimestamp()
+    };
+
+    await updateDoc(enrollmentRef, updates);
+
+    // Get the updated enrollment
+    return getEnrollmentById(enrollmentId);
+  } catch (error) {
+    console.error('Error updating enrollment:', error);
+    throw error;
+  }
+};
+
 export const isUserEnrolledInCourse = async (userId: string, courseId: string) => {
-  const q = query(
-    collection(db, ENROLLMENTS_COLLECTION),
-    where('userId', '==', userId),
-    where('courseId', '==', courseId),
-    limit(1)
-  );
+  if (isDemoMode) {
+    console.log('Checking if user is enrolled in course (demo):', userId, courseId);
+    return demoEnrollmentsData.some(e => e.userId === userId && e.courseId === courseId);
+  }
 
-  const querySnapshot = await getDocs(q);
-  return !querySnapshot.empty;
+  try {
+    const q = query(
+      collection(db, ENROLLMENTS_COLLECTION),
+      where('userId', '==', userId),
+      where('courseId', '==', courseId)
+    );
+
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+  } catch (error) {
+    console.error('Error checking enrollment:', error);
+    throw error;
+  }
 };
 
-// Create a new enrollment
-export const createEnrollment = async (
-  userId: string,
-  courseId: string,
-  paymentAmount: number,
-  paymentId?: string
-) => {
-  // First check if the user is already enrolled
-  const alreadyEnrolled = await isUserEnrolledInCourse(userId, courseId);
-  if (alreadyEnrolled) {
-    throw new Error('User is already enrolled in this course');
+export const deleteEnrollment = async (enrollmentId: string) => {
+  if (isDemoMode) {
+    console.log('Deleting demo enrollment (simulated):', enrollmentId);
+    demoEnrollmentsData = demoEnrollmentsData.filter(e => e.id !== enrollmentId);
+    return true;
   }
 
-  const now = new Date();
-
-  const newEnrollment = {
-    userId,
-    courseId,
-    enrollmentDate: serverTimestamp(),
-    status: 'active' as EnrollmentStatus,
-    paymentId,
-    paymentAmount,
-    paymentDate: paymentId ? serverTimestamp() : null,
-    progress: 0,
-    progressStatus: 'not-started' as ProgressStatus,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  };
-
-  const enrollmentRef = await addDoc(collection(db, ENROLLMENTS_COLLECTION), newEnrollment);
-
-  // Update the course enrollment count
-  await updateCourseEnrollment(courseId, true);
-
-  return {
-    id: enrollmentRef.id,
-    ...newEnrollment,
-    enrollmentDate: now.toISOString(),
-    paymentDate: paymentId ? now.toISOString() : null,
-    createdAt: now.toISOString(),
-    updatedAt: now.toISOString(),
-  } as Enrollment;
+  try {
+    const enrollmentRef = doc(db, ENROLLMENTS_COLLECTION, enrollmentId);
+    await deleteDoc(enrollmentRef);
+    return true;
+  } catch (error) {
+    console.error('Error deleting enrollment:', error);
+    throw error;
+  }
 };
 
-// Update an enrollment
-export const updateEnrollment = async (
-  enrollmentId: string,
-  updates: Partial<Enrollment>
-) => {
-  const enrollmentRef = doc(db, ENROLLMENTS_COLLECTION, enrollmentId);
+export const updateEnrollmentStatus = async (enrollmentId: string, status: EnrollmentStatus) => {
+  if (isDemoMode) {
+    console.log('Updating demo enrollment status (simulated):', enrollmentId, status);
 
-  // Create update object
-  const updateData: any = {
-    ...updates,
-    updatedAt: serverTimestamp()
-  };
+    const enrollmentIndex = demoEnrollmentsData.findIndex(e => e.id === enrollmentId);
 
-  // Convert date strings to Firestore timestamps
-  if (updates.paymentDate) {
-    updateData.paymentDate = Timestamp.fromDate(new Date(updates.paymentDate));
-  }
-  if (updates.completionDate) {
-    updateData.completionDate = Timestamp.fromDate(new Date(updates.completionDate));
-  }
-  if (updates.certificateIssueDate) {
-    updateData.certificateIssueDate = Timestamp.fromDate(new Date(updates.certificateIssueDate));
+    if (enrollmentIndex !== -1) {
+      demoEnrollmentsData[enrollmentIndex] = {
+        ...demoEnrollmentsData[enrollmentIndex],
+        status,
+        updatedAt: new Date().toISOString()
+      };
+
+      return demoEnrollmentsData[enrollmentIndex];
+    }
+
+    return null;
   }
 
-  await updateDoc(enrollmentRef, updateData);
+  try {
+    const enrollmentRef = doc(db, ENROLLMENTS_COLLECTION, enrollmentId);
 
-  return getEnrollmentById(enrollmentId);
+    await updateDoc(enrollmentRef, {
+      status,
+      updatedAt: serverTimestamp()
+    });
+
+    return getEnrollmentById(enrollmentId);
+  } catch (error) {
+    console.error('Error updating enrollment status:', error);
+    throw error;
+  }
 };
 
-// Cancel an enrollment
-export const cancelEnrollment = async (enrollmentId: string) => {
-  const enrollment = await getEnrollmentById(enrollmentId);
+export const updateEnrollmentProgress = async (enrollmentId: string, progress: number) => {
+  if (isDemoMode) {
+    console.log('Updating demo enrollment progress (simulated):', enrollmentId, progress);
 
-  if (!enrollment) {
-    throw new Error('Enrollment not found');
+    const enrollmentIndex = demoEnrollmentsData.findIndex(e => e.id === enrollmentId);
+
+    if (enrollmentIndex !== -1) {
+      // Determine progress status
+      let progressStatus = demoEnrollmentsData[enrollmentIndex].progressStatus;
+
+      if (progress === 0) {
+        progressStatus = 'not-started';
+      } else if (progress >= 100) {
+        progressStatus = 'completed';
+      } else {
+        progressStatus = 'in-progress';
+      }
+
+      demoEnrollmentsData[enrollmentIndex] = {
+        ...demoEnrollmentsData[enrollmentIndex],
+        progress,
+        progressStatus,
+        updatedAt: new Date().toISOString()
+      };
+
+      return demoEnrollmentsData[enrollmentIndex];
+    }
+
+    return null;
   }
 
-  // Update enrollment status
-  await updateEnrollment(enrollmentId, {
-    status: 'cancelled' as EnrollmentStatus,
-  });
+  try {
+    const enrollmentRef = doc(db, ENROLLMENTS_COLLECTION, enrollmentId);
+    const enrollmentSnap = await getDoc(enrollmentRef);
 
-  // Update course enrollment count
-  await updateCourseEnrollment(enrollment.courseId, false);
+    if (enrollmentSnap.exists()) {
+      // Determine progress status
+      let progressStatus = 'in-progress';
 
-  return getEnrollmentById(enrollmentId);
-};
+      if (progress === 0) {
+        progressStatus = 'not-started';
+      } else if (progress >= 100) {
+        progressStatus = 'completed';
+      }
 
-// Update progress for an enrollment
-export const updateEnrollmentProgress = async (
-  enrollmentId: string,
-  progress: number
-) => {
-  // Ensure progress is between 0 and 100
-  const normalizedProgress = Math.max(0, Math.min(100, progress));
+      await updateDoc(enrollmentRef, {
+        progress,
+        progressStatus,
+        updatedAt: serverTimestamp()
+      });
 
-  // Determine progress status
-  let progressStatus: ProgressStatus = 'not-started';
-  if (normalizedProgress >= 100) {
-    progressStatus = 'completed';
-  } else if (normalizedProgress > 0) {
-    progressStatus = 'in-progress';
+      return getEnrollmentById(enrollmentId);
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error updating enrollment progress:', error);
+    throw error;
   }
-
-  // Update the enrollment
-  const updates: Partial<Enrollment> = {
-    progress: normalizedProgress,
-    progressStatus
-  };
-
-  // If completed, add completion date
-  if (progressStatus === 'completed') {
-    updates.completionDate = new Date().toISOString();
-  }
-
-  return updateEnrollment(enrollmentId, updates);
-};
-
-// Issue a certificate for a completed enrollment
-export const issueCertificate = async (
-  enrollmentId: string,
-  certificateUrl: string
-) => {
-  const enrollment = await getEnrollmentById(enrollmentId);
-
-  if (!enrollment) {
-    throw new Error('Enrollment not found');
-  }
-
-  if (enrollment.progress < 100 || enrollment.progressStatus !== 'completed') {
-    throw new Error('Course must be completed before issuing a certificate');
-  }
-
-  return updateEnrollment(enrollmentId, {
-    certificate: certificateUrl,
-    certificateIssueDate: new Date().toISOString()
-  });
 };

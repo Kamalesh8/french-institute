@@ -1,0 +1,19 @@
+[
+  {
+    "uid": "demo-admin-123",
+    "email": "admin@frenchinstitute.com",
+    "displayName": "Admin User",
+    "role": "admin",
+    "createdAt": "2025-04-15T15:29:28.061Z"
+  },
+  {
+    "uid": "demo-student-123",
+    "email": "student@example.com",
+    "displayName": "Demo Student",
+    "role": "student",
+    "createdAt": "2025-04-15T15:29:28.061Z",
+    "phoneNumber": "+1 (555) 123-4567",
+    "address": "123 Main St, Anytown, USA",
+    "bio": "I am a student learning French to prepare for a trip to Paris next year."
+  }
+]

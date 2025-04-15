@@ -1,0 +1,50 @@
+[
+  {
+    "id": "a1-beginner-module-1-lesson-1",
+    "moduleId": "a1-beginner-module-1",
+    "title": "Greetings and Introductions",
+    "description": "Learn basic greetings and how to introduce yourself in French.",
+    "content": "In this lesson, you will learn how to say hello, goodbye, and introduce yourself in French.",
+    "order": 1,
+    "duration": 30,
+    "videoURL": "https://example.com/videos/greetings.mp4",
+    "materials": [
+      "Basic French Vocabulary Sheet",
+      "Greetings Practice Audio"
+    ],
+    "createdAt": "2025-04-15T15:29:28.061Z",
+    "updatedAt": "2025-04-15T15:29:28.061Z"
+  },
+  {
+    "id": "a1-beginner-module-1-lesson-2",
+    "moduleId": "a1-beginner-module-1",
+    "title": "Numbers and Counting",
+    "description": "Learn to count from 1 to 100 in French.",
+    "content": "This lesson covers the numbers 1-100 and how to use them in conversation.",
+    "order": 2,
+    "duration": 45,
+    "videoURL": "https://example.com/videos/numbers.mp4",
+    "materials": [
+      "Numbers Worksheet",
+      "Practice Exercises"
+    ],
+    "createdAt": "2025-04-15T15:29:28.061Z",
+    "updatedAt": "2025-04-15T15:29:28.061Z"
+  },
+  {
+    "id": "a1-beginner-module-1-lesson-3",
+    "moduleId": "a1-beginner-module-1",
+    "title": "Days, Months, and Dates",
+    "description": "Learn to express dates and time in French.",
+    "content": "In this lesson, you will learn the days of the week, months of the year, and how to express dates in French.",
+    "order": 3,
+    "duration": 45,
+    "videoURL": "https://example.com/videos/dates.mp4",
+    "materials": [
+      "Calendar Vocabulary",
+      "Date Practice Worksheet"
+    ],
+    "createdAt": "2025-04-15T15:29:28.061Z",
+    "updatedAt": "2025-04-15T15:29:28.061Z"
+  }
+]

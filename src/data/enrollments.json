@@ -1,0 +1,16 @@
+[
+  {
+    "id": "enrollment-1",
+    "userId": "demo-student-123",
+    "courseId": "a1-beginner",
+    "enrollmentDate": "2025-05-15T00:00:00.000Z",
+    "status": "active",
+    "paymentId": "payment-123",
+    "paymentAmount": 199,
+    "paymentDate": "2025-05-15T00:00:00.000Z",
+    "progress": 15,
+    "progressStatus": "in-progress",
+    "createdAt": "2025-04-15T15:29:28.061Z",
+    "updatedAt": "2025-04-15T15:29:28.061Z"
+  }
+]

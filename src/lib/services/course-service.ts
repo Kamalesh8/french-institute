@@ -19,6 +19,43 @@ import {
 } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 
+// Check if we're in demo mode
+const isDemoMode = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes('DEMO') ||
+                  process.env.NEXT_PUBLIC_FIREBASE_API_KEY === undefined;
+
+// Import demo data if in demo mode
+let demoCoursesData: Course[] = [];
+if (isDemoMode) {
+  try {
+    if (typeof window !== 'undefined') {
+      // In the browser, fetch the data
+      fetch('/api/demo/courses')
+        .then(res => res.json())
+        .then(data => {
+          demoCoursesData = data;
+        })
+        .catch(err => {
+          console.error('Error loading demo courses data:', err);
+        });
+    } else {
+      // In Node.js - for SSR
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const dataPath = path.join(process.cwd(), 'src/data/courses.json');
+        if (fs.existsSync(dataPath)) {
+          const rawData = fs.readFileSync(dataPath, 'utf8');
+          demoCoursesData = JSON.parse(rawData);
+        }
+      } catch (e) {
+        console.error('Error loading server-side demo data:', e);
+      }
+    }
+  } catch (e) {
+    console.error('Error initializing demo courses data:', e);
+  }
+}
+
 const COURSES_COLLECTION = 'courses';
 
 // Get all courses with optional pagination
@@ -32,6 +69,59 @@ export const getCourses = async (options?: {
   sortBy?: 'startDate' | 'price' | 'level' | 'createdAt';
   sortDirection?: 'asc' | 'desc';
 }) => {
+  // Demo mode implementation
+  if (isDemoMode) {
+    console.log('Using demo courses data');
+
+    // Apply filters
+    let filteredCourses = [...demoCoursesData];
+
+    if (options?.level) {
+      filteredCourses = filteredCourses.filter(c => c.level === options.level);
+    }
+
+    if (options?.format) {
+      filteredCourses = filteredCourses.filter(c => c.format === options.format);
+    }
+
+    if (options?.schedule) {
+      filteredCourses = filteredCourses.filter(c => c.schedule === options.schedule);
+    }
+
+    if (options?.status) {
+      filteredCourses = filteredCourses.filter(c => c.status === options.status);
+    }
+
+    // Apply sorting
+    const sortBy = options?.sortBy || 'startDate';
+    const sortDirection = options?.sortDirection || 'desc';
+
+    filteredCourses.sort((a, b) => {
+      const valueA = a[sortBy];
+      const valueB = b[sortBy];
+
+      if (valueA < valueB) {
+        return sortDirection === 'asc' ? -1 : 1;
+      }
+      if (valueA > valueB) {
+        return sortDirection === 'asc' ? 1 : -1;
+      }
+      return 0;
+    });
+
+    // Apply pagination
+    const pageSize = options?.pageSize || 10;
+    let startIndex = 0;
+
+    const paginatedCourses = filteredCourses.slice(startIndex, startIndex + pageSize);
+
+    return {
+      courses: paginatedCourses,
+      lastVisible: null // In demo mode, we don't need this for pagination
+    };
+  }
+
+  // Real Firebase implementation
   const {
     pageSize = 10,
     lastVisible,
@@ -98,6 +188,12 @@ export const getCourses = async (options?: {
 
 // Get a course by ID
 export const getCourseById = async (courseId: string) => {
+  if (isDemoMode) {
+    console.log('Using demo courses data for course ID:', courseId);
+    const course = demoCoursesData.find(c => c.id === courseId);
+    return course || null;
+  }
+
   const courseRef = doc(db, COURSES_COLLECTION, courseId);
   const courseSnap = await getDoc(courseRef);
 
@@ -118,6 +214,22 @@ export const getCourseById = async (courseId: string) => {
 
 // Create a new course
 export const createCourse = async (courseData: Omit<Course, 'id' | 'createdAt' | 'updatedAt'>) => {
+  if (isDemoMode) {
+    console.log('Creating demo course (simulated):', courseData.title);
+    const newCourse: Course = {
+      id: `demo-course-${Date.now()}`,
+      ...courseData,
+      enrolledStudents: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // Add to demo data (temporary, will be lost on refresh)
+    demoCoursesData = [...demoCoursesData, newCourse];
+
+    return newCourse;
+  }
+
   const newCourse = {
     ...courseData,
     enrolledStudents: 0,
@@ -139,6 +251,26 @@ export const createCourse = async (courseData: Omit<Course, 'id' | 'createdAt' |
 
 // Update an existing course
 export const updateCourse = async (courseId: string, courseData: Partial<Course>) => {
+  if (isDemoMode) {
+    console.log('Updating demo course (simulated):', courseId);
+    const courseIndex = demoCoursesData.findIndex(c => c.id === courseId);
+
+    if (courseIndex !== -1) {
+      const updatedCourse = {
+        ...demoCoursesData[courseIndex],
+        ...courseData,
+        updatedAt: new Date().toISOString()
+      };
+
+      // Update demo data
+      demoCoursesData[courseIndex] = updatedCourse;
+
+      return updatedCourse;
+    }
+
+    return null;
+  }
+
   const courseRef = doc(db, COURSES_COLLECTION, courseId);
 
   // Create updated course data
@@ -163,6 +295,12 @@ export const updateCourse = async (courseId: string, courseData: Partial<Course>
 
 // Delete a course
 export const deleteCourse = async (courseId: string) => {
+  if (isDemoMode) {
+    console.log('Deleting demo course (simulated):', courseId);
+    demoCoursesData = demoCoursesData.filter(c => c.id !== courseId);
+    return true;
+  }
+
   const courseRef = doc(db, COURSES_COLLECTION, courseId);
   await deleteDoc(courseRef);
   return true;
@@ -170,6 +308,11 @@ export const deleteCourse = async (courseId: string) => {
 
 // Get courses by level
 export const getCoursesByLevel = async (level: CourseLevel) => {
+  if (isDemoMode) {
+    console.log('Getting demo courses by level:', level);
+    return demoCoursesData.filter(c => c.level === level);
+  }
+
   const q = query(
     collection(db, COURSES_COLLECTION),
     where('level', '==', level),
@@ -196,6 +339,26 @@ export const getCoursesByLevel = async (level: CourseLevel) => {
 
 // Update course enrollment count
 export const updateCourseEnrollment = async (courseId: string, increment: boolean) => {
+  if (isDemoMode) {
+    console.log('Updating demo course enrollment (simulated):', courseId, increment ? 'increment' : 'decrement');
+    const courseIndex = demoCoursesData.findIndex(c => c.id === courseId);
+
+    if (courseIndex !== -1) {
+      const currentEnrollment = demoCoursesData[courseIndex].enrolledStudents || 0;
+      const newEnrollment = increment ? currentEnrollment + 1 : Math.max(0, currentEnrollment - 1);
+
+      demoCoursesData[courseIndex] = {
+        ...demoCoursesData[courseIndex],
+        enrolledStudents: newEnrollment,
+        updatedAt: new Date().toISOString()
+      };
+
+      return true;
+    }
+
+    return false;
+  }
+
   const courseRef = doc(db, COURSES_COLLECTION, courseId);
   const courseSnap = await getDoc(courseRef);
 

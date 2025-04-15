@@ -1,0 +1,11 @@
+[
+  {
+    "id": "a1-beginner-module-1",
+    "courseId": "a1-beginner",
+    "title": "Introduction to French",
+    "description": "Learn the basics of French language, including greetings and simple phrases.",
+    "order": 1,
+    "createdAt": "2025-04-15T15:29:28.061Z",
+    "updatedAt": "2025-04-15T15:29:28.061Z"
+  }
+]

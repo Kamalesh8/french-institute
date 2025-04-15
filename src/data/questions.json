@@ -1,0 +1,51 @@
+[
+  {
+    "id": "a1-beginner-module-1-quiz-q1",
+    "quizId": "a1-beginner-module-1-quiz",
+    "type": "multiple-choice",
+    "question": "How do you say \"Hello\" in French?",
+    "options": [
+      "Bonjour",
+      "Au revoir",
+      "Merci",
+      "S'il vous plaît"
+    ],
+    "correctAnswer": "Bonjour",
+    "points": 10,
+    "order": 1,
+    "createdAt": "2025-04-15T15:29:28.061Z",
+    "updatedAt": "2025-04-15T15:29:28.061Z"
+  },
+  {
+    "id": "a1-beginner-module-1-quiz-q2",
+    "quizId": "a1-beginner-module-1-quiz",
+    "type": "multiple-choice",
+    "question": "What is \"42\" in French?",
+    "options": [
+      "Vingt-deux",
+      "Quarante-deux",
+      "Cinquante-deux",
+      "Quatorze"
+    ],
+    "correctAnswer": "Quarante-deux",
+    "points": 10,
+    "order": 2,
+    "createdAt": "2025-04-15T15:29:28.061Z",
+    "updatedAt": "2025-04-15T15:29:28.061Z"
+  },
+  {
+    "id": "a1-beginner-module-1-quiz-q3",
+    "quizId": "a1-beginner-module-1-quiz",
+    "type": "true-false",
+    "question": "In French, \"mercredi\" means Wednesday.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correctAnswer": "True",
+    "points": 10,
+    "order": 3,
+    "createdAt": "2025-04-15T15:29:28.061Z",
+    "updatedAt": "2025-04-15T15:29:28.061Z"
+  }
+]
