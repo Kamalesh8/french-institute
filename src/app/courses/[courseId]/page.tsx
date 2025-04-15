@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -11,9 +9,26 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import MainLayout from "@/components/layout/main-layout";
 import { getCourseById } from "@/lib/services/course-service";
-import { createEnrollment, isUserEnrolledInCourse } from "@/lib/services/enrollment-service";
+import { isUserEnrolledInCourse } from "@/lib/services/enrollment-service";
 import type { Course } from "@/lib/types";
-import { FaBook, FaCalendarAlt, FaClock, FaGraduationCap, FaMapMarkerAlt, FaUsers, FaCheck, FaStar, FaCertificate, FaRegPlayCircle, FaChalkboardTeacher, FaComments } from "react-icons/fa";
+import {
+  FaBook,
+  FaCalendarAlt,
+  FaClock,
+  FaGraduationCap,
+  FaMapMarkerAlt,
+  FaUsers,
+  FaCheck,
+  FaStar,
+  FaCertificate,
+  FaRegPlayCircle,
+  FaChalkboardTeacher,
+  FaComments,
+  FaFacebookF,
+  FaTwitter,
+  FaLinkedinIn,
+  FaShareAlt
+} from "react-icons/fa";
 
 // Sample course images based on level
 const COURSE_IMAGES = {
@@ -33,7 +48,6 @@ export default function CourseDetailPage({ params }: { params: { courseId: strin
   const [course, setCourse] = useState<Course | null>(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isEnrolling, setIsEnrolling] = useState(false);
 
   useEffect(() => {
     const fetchCourseAndEnrollmentStatus = async () => {
@@ -63,39 +77,15 @@ export default function CourseDetailPage({ params }: { params: { courseId: strin
     fetchCourseAndEnrollmentStatus();
   }, [courseId, user, toast]);
 
-  const handleEnroll = async () => {
+  const handleEnrollClick = () => {
     if (!user) {
       // Redirect to login if not authenticated
       router.push(`/auth/login?redirect=/courses/${courseId}`);
       return;
     }
 
-    setIsEnrolling(true);
-    try {
-      // Create enrollment
-      await createEnrollment(user.uid, courseId, course!.price);
-
-      // Update UI state
-      setIsEnrolled(true);
-
-      toast({
-        title: "Successfully enrolled!",
-        description: `You are now enrolled in ${course!.title}.`,
-      });
-
-      // Redirect to dashboard
-      router.push("/dashboard");
-    } catch (error) {
-      console.error("Error enrolling in course:", error);
-
-      toast({
-        variant: "destructive",
-        title: "Enrollment failed",
-        description: "There was a problem enrolling in this course. Please try again.",
-      });
-    } finally {
-      setIsEnrolling(false);
-    }
+    // Redirect to the enrollment page
+    router.push(`/courses/${courseId}/enroll`);
   };
 
   if (isLoading) {
@@ -518,10 +508,10 @@ export default function CourseDetailPage({ params }: { params: { courseId: strin
                     <div className="space-y-4">
                       <Button
                         className="w-full py-6 hover-lift"
-                        onClick={handleEnroll}
-                        disabled={isEnrolling || course.enrolledStudents >= course.maxStudents}
+                        onClick={handleEnrollClick}
+                        disabled={course.enrolledStudents >= course.maxStudents}
                       >
-                        {isEnrolling ? "Processing..." : "Enroll Now"}
+                        Enroll Now
                       </Button>
                       {course.enrolledStudents >= course.maxStudents && (
                         <p className="text-sm text-destructive text-center">
@@ -539,13 +529,16 @@ export default function CourseDetailPage({ params }: { params: { courseId: strin
                   <p className="text-sm text-center mb-4">Share this course</p>
                   <div className="flex justify-center gap-3">
                     <Button variant="outline" size="icon" className="rounded-full w-9 h-9">
-                      <FaFacebook className="h-4 w-4" />
+                      <FaFacebookF className="h-4 w-4" />
                     </Button>
                     <Button variant="outline" size="icon" className="rounded-full w-9 h-9">
                       <FaTwitter className="h-4 w-4" />
                     </Button>
                     <Button variant="outline" size="icon" className="rounded-full w-9 h-9">
-                      <FaLinkedin className="h-4 w-4" />
+                      <FaLinkedinIn className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="rounded-full w-9 h-9">
+                      <FaShareAlt className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
