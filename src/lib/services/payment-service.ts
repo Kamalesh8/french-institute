@@ -1,4 +1,4 @@
-import { db } from '@/config/firebase';
+﻿import { db } from '@/config/firebase';
 import type { Payment } from '@/lib/types';
 import {
   collection,
@@ -228,3 +228,4 @@ export const getPaymentStatistics = async () => {
     throw error;
   }
 };
+

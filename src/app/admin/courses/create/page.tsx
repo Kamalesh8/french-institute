@@ -27,22 +27,27 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
-import MainLayout from "@/components/layout/main-layout";
+
 import { createCourse } from "@/lib/services/course-service";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { format, addWeeks } from "date-fns";
 
 // Define form schema with validation
 const formSchema = z.object({
-  title: z.string().min(5, "Title must be at least 5 characters"),
-  description: z.string().min(20, "Description must be at least 20 characters"),
+  title: z.string().min(3).max(100),
+  description: z.string().min(10).max(500),
   level: z.enum(["A1", "A2", "B1", "B2", "C1", "C2"]),
-  format: z.enum(["online", "hybrid", "in-person"]),
-  schedule: z.enum(["morning", "afternoon", "evening", "weekend", "flexible"]),
-  duration: z.coerce.number().min(1, "Duration must be at least 1 week"),
-  hoursPerWeek: z.coerce.number().min(1, "Hours per week must be at least 1"),
-  startDate: z.string().min(1, "Start date is required"),
-  price: z.coerce.number().min(1, "Price must be at least 1"),
+  format: z.enum(["online"]),
+  schedule: z.enum(["flexible", "fixed"]),
+  duration: z.number().min(1).max(52),
+  hoursPerWeek: z.number().min(1).max(20),
+  startDate: z.string().refine((value) => {
+    const date = new Date(value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date >= today;
+  }, "Start date must be today or in the future"),
+  price: z.number().min(0),
   currency: z.string().min(1, "Currency is required"),
   maxStudents: z.coerce.number().min(1, "Maximum students must be at least 1"),
   instructor: z.string().min(2, "Instructor name must be at least 2 characters"),
@@ -132,7 +137,7 @@ export default function CreateCoursePage() {
   }
 
   return (
-    <MainLayout>
+    
       <div className="container py-10">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -243,8 +248,8 @@ export default function CreateCoursePage() {
                             </FormControl>
                             <SelectContent>
                               <SelectItem value="online">Online</SelectItem>
-                              <SelectItem value="hybrid">Hybrid</SelectItem>
-                              <SelectItem value="in-person">In-Person</SelectItem>
+                              
+                              
                             </SelectContent>
                           </Select>
                           <FormDescription>
@@ -485,6 +490,7 @@ Week 2: Basic vocabulary and greetings..."
           </CardContent>
         </Card>
       </div>
-    </MainLayout>
+    
   );
 }
+

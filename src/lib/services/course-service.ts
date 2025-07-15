@@ -20,8 +20,8 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 
 // Check if we're in demo mode
-const isDemoMode = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes('DEMO') ||
-                  process.env.NEXT_PUBLIC_FIREBASE_API_KEY === undefined;
+// Demo mode disabled by default; enable by setting NEXT_PUBLIC_DEMO_MODE=true
+const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
 // Import demo data if in demo mode
 let demoCoursesData: Course[] = [];
@@ -59,16 +59,16 @@ if (isDemoMode) {
 const COURSES_COLLECTION = 'courses';
 
 // Get all courses with optional pagination
-export const getCourses = async (options?: {
+export async function getCourses(options: {
   pageSize?: number;
   lastVisible?: DocumentSnapshot;
   level?: CourseLevel;
   format?: CourseFormat;
   schedule?: CourseSchedule;
   status?: CourseStatus;
-  sortBy?: 'startDate' | 'price' | 'level' | 'createdAt';
+  sortBy?: keyof Course;
   sortDirection?: 'asc' | 'desc';
-}) => {
+} = {}) {
   // Demo mode implementation
   if (isDemoMode) {
     console.log('Using demo courses data');
@@ -117,7 +117,8 @@ export const getCourses = async (options?: {
 
     return {
       courses: paginatedCourses,
-      lastVisible: null // In demo mode, we don't need this for pagination
+      lastVisible: null, // In demo mode, we don't need this for pagination
+      hasMore: filteredCourses.length > paginatedCourses.length
     };
   }
 
@@ -131,7 +132,7 @@ export const getCourses = async (options?: {
     status,
     sortBy = 'startDate',
     sortDirection = 'desc'
-  } = options || {};
+  } = options;
 
   const coursesQuery = collection(db, COURSES_COLLECTION);
   const constraints = [];
@@ -154,30 +155,25 @@ export const getCourses = async (options?: {
   constraints.push(orderBy(sortBy, sortDirection));
 
   // Add pagination
+  constraints.push(limit(pageSize));
+
+  // Add pagination if lastVisible is provided
   if (lastVisible) {
     constraints.push(startAfter(lastVisible));
   }
-  constraints.push(limit(pageSize));
 
-  // Create the query
-  const q = query(coursesQuery, ...constraints);
+  // Execute query with all constraints
+  const queryWithConstraints = query(coursesQuery, ...constraints);
+  const querySnapshot = await getDocs(queryWithConstraints);
 
-  // Execute the query
-  const querySnapshot = await getDocs(q);
+  // Convert documents to Course objects
+  const courses: Course[] = querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
 
-  // Parse the results
-  const courses: Course[] = [];
-  querySnapshot.forEach((doc) => {
-    const data = doc.data();
-    courses.push({
-      id: doc.id,
-      ...data,
-      createdAt: data.createdAt?.toDate?.() ? data.createdAt.toDate().toISOString() : data.createdAt,
-      updatedAt: data.updatedAt?.toDate?.() ? data.updatedAt.toDate().toISOString() : data.updatedAt,
-      startDate: data.startDate?.toDate?.() ? data.startDate.toDate().toISOString() : data.startDate,
-      endDate: data.endDate?.toDate?.() ? data.endDate.toDate().toISOString() : data.endDate,
-    } as Course);
-  });
+  // Determine if there are more pages
+  const hasMore = querySnapshot.docs.length === pageSize;
 
   // Return the results and the last document for pagination
   return {
@@ -380,3 +376,4 @@ export const updateCourseEnrollment = async (courseId: string, increment: boolea
 
   return false;
 };
+

@@ -1,4 +1,4 @@
-import { db } from '@/config/firebase';
+﻿import { db } from '@/config/firebase';
 import type { Lesson, LessonStatus } from '@/lib/types';
 import {
   collection,
@@ -126,3 +126,4 @@ export const updateLessonOrder = async (lessonId: string, newOrder: number) => {
 
   return true;
 };
+

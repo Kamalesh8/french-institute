@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -201,13 +201,13 @@ export default function LiveSessionPage({ params }: { params: { courseId: string
         { id: "student-3", name: "Maria Garcia", isInstructor: false }
       ];
       const messages = [
-        "Bonjour! Comment ça va?",
+        "Bonjour! Comment Ã§a va?",
         "Je ne comprends pas cette question.",
-        "Pouvez-vous répéter, s'il vous plaît?",
+        "Pouvez-vous rÃ©pÃ©ter, s'il vous plaÃ®t?",
         "Merci beaucoup!",
         "Est-ce que vous pouvez expliquer encore une fois?",
-        "C'est très intéressant!",
-        "Je suis désolé, je suis un peu en retard.",
+        "C'est trÃ¨s intÃ©ressant!",
+        "Je suis dÃ©solÃ©, je suis un peu en retard.",
         "Quelle est la prononciation correcte?"
       ];
 
@@ -662,3 +662,4 @@ export default function LiveSessionPage({ params }: { params: { courseId: string
     </div>
   );
 }
+

@@ -1,20 +1,45 @@
-import { db } from '@/config/firebase';
+﻿import { db } from '@/config/firebase';
+import type { Enrollment, EnrollmentStatus, ProgressStatus, Course } from '@/lib/types';
 import {
   collection,
   doc,
   getDoc,
   getDocs,
-  query,
-  where,
   addDoc,
   updateDoc,
   deleteDoc,
-  serverTimestamp
+  query,
+  where,
+  orderBy,
+  serverTimestamp,
+  Timestamp
 } from 'firebase/firestore';
-import type { Enrollment, EnrollmentStatus } from '@/lib/types';
+import { getCourseById } from './course-service';
+
+// Type definitions
+interface EnrollmentData {
+  userId: string;
+  courseId: string;
+  enrollmentDate?: string;
+  status: EnrollmentStatus;
+  paymentId?: string;
+  paymentAmount: number;
+  paymentDate?: string;
+  completionDate?: string;
+  progress: number;
+  progressStatus: ProgressStatus;
+  certificate?: string;
+  certificateIssueDate?: string;
+}
 
 // Check if we're in demo mode
 const isDemoMode = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes('DEMO') ||
+                   process.env.NEXT_PUBLIC_FIREBASE_API_KEY === undefined;
+
+// Helper functions
+const formatTimestamp = (timestamp: Timestamp | undefined): string => {
+  return timestamp?.toDate().toISOString() || new Date().toISOString();
+};
                   process.env.NEXT_PUBLIC_FIREBASE_API_KEY === undefined;
 
 // Import demo data if in demo mode
@@ -70,13 +95,60 @@ export const createEnrollment = async (enrollmentData: Omit<Enrollment, 'id' | '
   }
 
   try {
+    // Get the course details
+    const course = await getCourseById(enrollmentData.courseId);
+    if (!course) {
+      throw new Error('Course not found');
+    }
+
+    // Validate enrollment date
+    const enrollmentDate = new Date(enrollmentData.enrollmentDate || new Date());
+    const courseStartDate = new Date(course.startDate);
+    const courseEndDate = new Date(course.endDate);
+
+    if (enrollmentDate < courseStartDate) {
+      throw new Error('Enrollment date cannot be before course start date');
+    }
+
+    if (enrollmentDate > courseEndDate) {
+      throw new Error('Enrollment date cannot be after course end date');
+    }
+
+    // Set initial status based on dates
+    const status = enrollmentDate <= courseStartDate ? 'upcoming' : 'active';
+
     const newEnrollment = {
       ...enrollmentData,
+      status,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
 
+    // Convert date strings to Firestore timestamps
+    if (newEnrollment.enrollmentDate) {
+      newEnrollment.enrollmentDate = Timestamp.fromDate(new Date(newEnrollment.enrollmentDate));
+    }
+    if (newEnrollment.paymentDate) {
+      newEnrollment.paymentDate = Timestamp.fromDate(new Date(newEnrollment.paymentDate));
+    }
+
     const enrollmentRef = await addDoc(collection(db, ENROLLMENTS_COLLECTION), newEnrollment);
+
+    // Fetch the created enrollment to return
+    const enrollmentDoc = await getDoc(enrollmentRef);
+    if (enrollmentDoc.exists()) {
+      const data = enrollmentDoc.data();
+      return {
+        id: enrollmentDoc.id,
+        ...data,
+        createdAt: formatTimestamp(data.createdAt),
+        updatedAt: formatTimestamp(data.updatedAt),
+        enrollmentDate: formatTimestamp(data.enrollmentDate),
+        paymentDate: data.paymentDate ? formatTimestamp(data.paymentDate) : null,
+        status: data.status as EnrollmentStatus
+      } as Enrollment;
+    }
+
     return { id: enrollmentRef.id, ...enrollmentData } as Enrollment;
   } catch (error) {
     console.error('Error creating enrollment:', error);
@@ -352,3 +424,4 @@ export const updateEnrollmentProgress = async (enrollmentId: string, progress: n
     throw error;
   }
 };
+

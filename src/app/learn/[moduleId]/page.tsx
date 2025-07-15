@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -41,9 +41,9 @@ const getLessonData = (moduleId) => {
             { french: "Salut", english: "Hi (informal)", pronunciation: "sah-LEW" },
             { french: "Bonsoir", english: "Good evening", pronunciation: "bohn-SWAHR" },
             { french: "Au revoir", english: "Goodbye", pronunciation: "oh ruh-VWAHR" },
-            { french: "À bientôt", english: "See you soon", pronunciation: "ah bee-yen-TOH" },
+            { french: "Ã€ bientÃ´t", english: "See you soon", pronunciation: "ah bee-yen-TOH" },
             { french: "Comment allez-vous?", english: "How are you? (formal)", pronunciation: "koh-mohn tah-lay VOO" },
-            { french: "Ça va?", english: "How are you? (informal)", pronunciation: "sah vah" },
+            { french: "Ã‡a va?", english: "How are you? (informal)", pronunciation: "sah vah" },
             { french: "Bien, merci", english: "Well, thank you", pronunciation: "bee-yan, mare-SEE" }
           ],
           grammar: [
@@ -53,7 +53,7 @@ const getLessonData = (moduleId) => {
             },
             {
               title: "Basic Question Structure",
-              explanation: "Questions in French can be formed by changing intonation: 'Ça va.' (You're well.) vs 'Ça va?' (Are you well?)"
+              explanation: "Questions in French can be formed by changing intonation: 'Ã‡a va.' (You're well.) vs 'Ã‡a va?' (Are you well?)"
             }
           ],
           exercises: [
@@ -84,7 +84,7 @@ const getLessonData = (moduleId) => {
             { text: "Bonjour", audioUrl: "/audio/bonjour.mp3" },
             { text: "Salut", audioUrl: "/audio/salut.mp3" },
             { text: "Comment allez-vous?", audioUrl: "/audio/comment-allez-vous.mp3" },
-            { text: "Ça va?", audioUrl: "/audio/ca-va.mp3" },
+            { text: "Ã‡a va?", audioUrl: "/audio/ca-va.mp3" },
             { text: "Au revoir", audioUrl: "/audio/au-revoir.mp3" }
           ]
         },
@@ -100,11 +100,11 @@ const getLessonData = (moduleId) => {
             { french: "Je m'appelle...", english: "My name is...", pronunciation: "zhuh mah-PELL" },
             { french: "Comment vous appelez-vous?", english: "What is your name? (formal)", pronunciation: "koh-mohn voo zah-play VOO" },
             { french: "Comment tu t'appelles?", english: "What is your name? (informal)", pronunciation: "koh-mohn tew tah-PELL" },
-            { french: "Enchanté(e)", english: "Pleased to meet you", pronunciation: "ahn-shahn-TAY" },
+            { french: "EnchantÃ©(e)", english: "Pleased to meet you", pronunciation: "ahn-shahn-TAY" },
             { french: "Je suis...", english: "I am...", pronunciation: "zhuh SWEE" },
-            { french: "J'habite à...", english: "I live in...", pronunciation: "zhah-BEET ah" },
+            { french: "J'habite Ã ...", english: "I live in...", pronunciation: "zhah-BEET ah" },
             { french: "Je viens de...", english: "I come from...", pronunciation: "zhuh vee-YEN duh" },
-            { french: "Je parle français", english: "I speak French", pronunciation: "zhuh PAHRL frahn-SAY" }
+            { french: "Je parle franÃ§ais", english: "I speak French", pronunciation: "zhuh PAHRL frahn-SAY" }
           ],
           grammar: [
             {
@@ -113,39 +113,39 @@ const getLessonData = (moduleId) => {
             },
             {
               title: "Basic Sentence Structure",
-              explanation: "French sentences typically follow a Subject-Verb-Object structure, similar to English: 'Je (subject) parle (verb) français (object)'."
+              explanation: "French sentences typically follow a Subject-Verb-Object structure, similar to English: 'Je (subject) parle (verb) franÃ§ais (object)'."
             }
           ],
           exercises: [
             {
               type: "multiple-choice",
               question: "How do you say 'My name is...' in French?",
-              options: ["Je suis...", "Je m'appelle...", "J'habite à...", "Comment tu t'appelles?"],
+              options: ["Je suis...", "Je m'appelle...", "J'habite Ã ...", "Comment tu t'appelles?"],
               correctAnswer: "Je m'appelle..."
             },
             {
               type: "multiple-choice",
               question: "Which phrase means 'I come from...'?",
-              options: ["Je suis...", "Je parle...", "Je viens de...", "J'habite à..."],
+              options: ["Je suis...", "Je parle...", "Je viens de...", "J'habite Ã ..."],
               correctAnswer: "Je viens de..."
             },
             {
               type: "fill-in-blank",
-              question: "To say 'I live in Paris', you would say: 'J'habite à _____.'",
+              question: "To say 'I live in Paris', you would say: 'J'habite Ã  _____.'",
               answer: "Paris"
             },
             {
               type: "true-false",
-              question: "'Je parle français' means 'I speak French'.",
+              question: "'Je parle franÃ§ais' means 'I speak French'.",
               answer: true
             }
           ],
           audioSamples: [
             { text: "Je m'appelle Jean", audioUrl: "/audio/je-mappelle.mp3" },
             { text: "Comment vous appelez-vous?", audioUrl: "/audio/comment-vous-appelez-vous.mp3" },
-            { text: "Je suis étudiant", audioUrl: "/audio/je-suis-etudiant.mp3" },
-            { text: "J'habite à Paris", audioUrl: "/audio/jhabite-a-paris.mp3" },
-            { text: "Je viens des États-Unis", audioUrl: "/audio/je-viens-des-etats-unis.mp3" }
+            { text: "Je suis Ã©tudiant", audioUrl: "/audio/je-suis-etudiant.mp3" },
+            { text: "J'habite Ã  Paris", audioUrl: "/audio/jhabite-a-paris.mp3" },
+            { text: "Je viens des Ã‰tats-Unis", audioUrl: "/audio/je-viens-des-etats-unis.mp3" }
           ]
         }
       ]
@@ -519,3 +519,4 @@ export default function LearningModulePage({ params }: { params: { moduleId: str
     </MainLayout>
   );
 }
+

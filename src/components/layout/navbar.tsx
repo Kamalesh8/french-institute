@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useSession, signOut as nextAuthSignOut } from 'next-auth/react';
 import NotificationCenter from "@/components/notifications/notification-center";
 import { useAuth } from "@/context/auth-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,10 +13,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FaGraduationCap, FaBook, FaChartLine, FaUser } from "react-icons/fa";
+import { FaBook, FaChartLine, FaUser } from "react-icons/fa";
+import Image from "next/image";
 
 export default function Navbar() {
-  const { user, signOut } = useAuth();
+  const { user, logout } = useAuth();
+  const { data: session } = useSession();
+  // Prefer user from AuthContext; fallback to NextAuth session user
+  const currentUser = user || (session?.user as any) || null;
   const pathname = usePathname();
 
   const isActive = (path: string) => pathname === path;
@@ -34,13 +39,22 @@ export default function Navbar() {
 
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center">
-        <Link href="/" className="flex items-center space-x-2">
-          <FaGraduationCap className="h-6 w-6" />
-          <span className="font-bold">French Institute</span>
+      <div className="container flex h-16 items-center justify-between">
+        <Link href="/" className="flex items-center space-x-2 flex-shrink-0">
+          <div className="w-5 h-5 rounded-full bg-primary/10 overflow-hidden">
+            <Image
+              src="/images/EB_LOGO_.jpg"
+              alt="Logo"
+              width={20}
+              height={20}
+              className="object-cover"
+            />
+          </div>
+          <span className="font-bold hidden sm:inline">L'école&nbsp;Bibliothèque</span>
+          <span className="font-bold sm:hidden">EB</span>
         </Link>
 
-        <div className="mx-6 flex gap-6">
+        <div className="hidden md:flex md:mx-6 md:gap-6">
           {navigation.map((item) => (
             <Link
               key={item.href}
@@ -54,7 +68,7 @@ export default function Navbar() {
               {item.name}
             </Link>
           ))}
-          {user?.role === "admin" && (
+          {(currentUser as any)?.role === "admin" && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="h-8 w-8 p-0">
@@ -75,17 +89,17 @@ export default function Navbar() {
           )}
         </div>
 
-        <div className="ml-auto flex items-center gap-4">
+        <div className="flex items-center gap-2 md:gap-4 ml-auto">
           <NotificationCenter />
           
-          {user ? (
+          {currentUser ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.photoURL || ""} alt={user.displayName || ""} />
+                    <AvatarImage src={(currentUser as any)?.photoURL || ""} alt={(currentUser as any)?.displayName || ""} />
                     <AvatarFallback>
-                      {user.displayName?.charAt(0) || user.email?.charAt(0)}
+                      {(currentUser as any)?.displayName?.charAt(0) || (currentUser as any)?.email?.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -97,13 +111,17 @@ export default function Navbar() {
                 <DropdownMenuItem asChild>
                   <Link href="/settings">Settings</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => signOut()}>
+                <DropdownMenuItem onClick={() => {
+                  // Call both logout methods to ensure full sign-out
+                  logout().catch(() => {});
+                  nextAuthSignOut({ callbackUrl: '/auth/login' });
+                }}>
                   Log out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button asChild variant="default">
+            <Button asChild variant="default" className="whitespace-nowrap">
               <Link href="/auth/login">Sign in</Link>
             </Button>
           )}
@@ -112,3 +130,4 @@ export default function Navbar() {
     </nav>
   );
 }
+

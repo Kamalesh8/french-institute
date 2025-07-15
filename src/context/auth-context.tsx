@@ -1,20 +1,30 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from 'react';
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged, 
   updateProfile,
-  type UserCredential,
-  User
+  User as FirebaseUser,
+  UserCredential
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db } from '@/config/firebase';
+import { 
+  doc, 
+  setDoc, 
+  getDoc, 
+  serverTimestamp, 
+  updateDoc 
+} from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
+import { FirebaseError } from 'firebase/app';
 
-type UserRole = 'student' | 'admin';
+// Import Firebase services
+import { getFirebaseAuth, getFirestoreDb } from '@/config/firebase';
+
+type UserRole = 'student' | 'teacher' | 'admin';
 
 interface UserData {
   uid: string;
@@ -22,246 +32,421 @@ interface UserData {
   displayName: string | null;
   role: UserRole;
   photoURL?: string | null;
+  emailVerified?: boolean;
+  createdAt?: Date | any; // Allow Firestore Timestamp
+  updatedAt?: Date | any; // Allow Firestore Timestamp
+  lastLoginAt?: Date | any; // Allow Firestore Timestamp
 }
 
 interface AuthContextType {
   user: UserData | null;
   loading: boolean;
-  register: (email: string, password: string, name: string, role: UserRole) => Promise<UserCredential | null>;
-  login: (email: string, password: string) => Promise<UserCredential | null>;
+  login: (email: string, password: string) => Promise<{user: UserData | null, credential: UserCredential}>;
+  register: (email: string, password: string, displayName: string, role?: UserRole) => Promise<UserCredential>;
   logout: () => Promise<void>;
-  updateUserProfile: (displayName?: string, photoURL?: string) => Promise<void>;
-  isDemoMode: boolean;
+  updateUserProfile: (updates: { displayName?: string; photoURL?: string }) => Promise<void>;
 }
 
-// Check if we're in demo mode
-const isDemoMode = process.env.NEXT_PUBLIC_FIREBASE_API_KEY?.includes('DEMO') ||
-                  process.env.NEXT_PUBLIC_FIREBASE_API_KEY === undefined;
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const AuthContext = createContext<AuthContextType | null>(null);
-
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // In demo mode, set up a demo user after a short delay
-    if (isDemoMode) {
-      const timer = setTimeout(() => {
-        // Set demo user
-        const demoUser: UserData = {
-          uid: 'demo-user-123',
-          email: 'demo@example.com',
-          displayName: 'Demo User',
+  const router = useRouter();
+  
+  // Map Firebase user to our UserData type
+  const mapFirebaseUser = useCallback(async (firebaseUser: FirebaseUser | null): Promise<UserData | null> => {
+    if (!firebaseUser) return null;
+    
+    try {
+      const { db } = getServices();
+      let userDoc;
+      try {
+        userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+      } catch (error) {
+        console.warn('Error fetching user document, using minimal user data:', error);
+        return {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          displayName: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL || null,
           role: 'student',
-          photoURL: null
+          emailVerified: firebaseUser.emailVerified,
+          createdAt: new Date(firebaseUser.metadata.creationTime || Date.now()),
+          updatedAt: new Date(),
+          lastLoginAt: new Date()
         };
-
-        setUser(demoUser);
-
-        // Set demo cookies
-        Cookies.set('auth-token', 'demo-token', { expires: 1 });
-        Cookies.set('user-role', 'student', { expires: 1 });
-
-        setLoading(false);
-        console.log('Running in DEMO mode with simulated authentication');
-      }, 1000);
-
-      return () => clearTimeout(timer);
-    }
-
-    // Real Firebase auth
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
+      }
+      
+      if (userDoc.exists()) {
+        const data = userDoc.data() as UserData;
+        return {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          displayName: firebaseUser.displayName || data.displayName || null,
+          photoURL: firebaseUser.photoURL || data.photoURL || null,
+          role: data.role || 'student',
+          emailVerified: firebaseUser.emailVerified,
+          createdAt: safeGetDate(data.createdAt),
+          updatedAt: safeGetDate(data.updatedAt),
+          lastLoginAt: safeGetDate(data.lastLoginAt)
+        };
+      } else {
+        // Create user document if it doesn't exist
+        const now = new Date();
+        const newUser: UserData = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          displayName: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL || null,
+          role: 'student',
+          emailVerified: firebaseUser.emailVerified,
+          createdAt: now,
+          updatedAt: now,
+          lastLoginAt: now
+        };
+        
+        // Create initial user document
         try {
-          // Fetch additional user info from Firestore
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDoc = await getDoc(userDocRef);
+          await setDoc(doc(db, 'users', firebaseUser.uid), {
+          ...newUser,
+                      createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            lastLoginAt: serverTimestamp(),
+        
+                  });
+        } catch (fireErr) {
+          console.warn('Unable to create initial user document:', fireErr);
+        }
+        return newUser;
+      }
+    } catch (error) {
+      console.error('Error mapping Firebase user:', error);
+      return null;
+    }
+  }, []);
 
-          let userData: UserData;
-
-          if (userDoc.exists()) {
-            const userDocData = userDoc.data();
-
-            userData = {
-              uid: user.uid,
-              email: user.email,
-              displayName: user.displayName,
-              photoURL: user.photoURL,
-              role: userDocData.role || 'student',
-            };
-
-            // Set cookies for middleware
-            Cookies.set('auth-token', await user.getIdToken(), { expires: 7 });
-            Cookies.set('user-role', userData.role, { expires: 7 });
-          } else {
-            userData = {
-              uid: user.uid,
-              email: user.email,
-              displayName: user.displayName,
-              photoURL: user.photoURL,
-              role: 'student',
-            };
-
-            // Set cookies for middleware
-            Cookies.set('auth-token', await user.getIdToken(), { expires: 7 });
-            Cookies.set('user-role', 'student', { expires: 7 });
+  // Set up auth state listener
+  useEffect(() => {
+    const { auth } = getServices();
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log('Auth state changed:', firebaseUser);
+      try {
+        if (firebaseUser) {
+          // Build user data and fetch role from the separate roles collection
+          let role: UserRole = 'student';
+          try {
+            const { db } = getServices();
+            const roleSnap = await getDoc(doc(db, 'roles', firebaseUser.uid));
+            if (roleSnap.exists()) {
+              const data = roleSnap.data() as { role?: UserRole };
+              if (data?.role) role = data.role;
+            }
+          } catch (err) {
+            console.warn('Unable to fetch role document:', err);
           }
 
+          const userData: UserData = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email || '',
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL || null,
+            role,
+            emailVerified: firebaseUser.emailVerified,
+            createdAt: new Date(firebaseUser.metadata.creationTime || Date.now()),
+            updatedAt: new Date(),
+            lastLoginAt: new Date(firebaseUser.metadata.lastSignInTime || Date.now())
+          };
           setUser(userData);
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-          // Set basic user data from auth object
-          setUser({
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            photoURL: user.photoURL,
-            role: 'student',
-          });
+          const tokenResult = await firebaseUser.getIdTokenResult();
+          Cookies.set('auth-token', tokenResult.token, { expires: 7, path: '/' });
+          Cookies.set('user-role', role, { expires: 7, path: '/' });
+        } else {
+          setUser(null);
         }
-      } else {
+      } catch (error) {
+        console.error('Error in auth state change:', error);
         setUser(null);
-        // Remove cookies when signed out
-        Cookies.remove('auth-token');
-        Cookies.remove('user-role');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  const register = async (email: string, password: string, name: string, role: UserRole = 'student') => {
-    if (isDemoMode) {
-      console.log('Demo mode: Simulating registration for:', email);
-      // Simulate successful registration
-      const demoUser: UserData = {
-        uid: 'demo-user-' + Date.now(),
-        email: email,
-        displayName: name,
-        role: role,
-        photoURL: null
-      };
-
-      setUser(demoUser);
-
-      // Set demo cookies
-      Cookies.set('auth-token', 'demo-token', { expires: 1 });
-      Cookies.set('user-role', role, { expires: 1 });
-
-      return null;
+  const safeGetDate = (date: any): Date => {
+    if (date === undefined || date === null) {
+      return new Date();
     }
+    return typeof date.toDate === 'function' ? date.toDate() : new Date(date);
+  };
 
+  const login = async (email: string, password: string): Promise<{user: UserData | null, credential: UserCredential}> => {
+    console.log('Login attempt with email:', email);
+    const { auth, db } = getServices();
+    
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-
-      // Update the user profile
-      if (auth.currentUser) {
-        await updateProfile(auth.currentUser, { displayName: name });
+      setLoading(true);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      if (!userCredential.user) {
+        throw new Error('No user found with these credentials');
       }
+      
+      const userDocRef = doc(db, 'users', userCredential.user.uid);
+      
+      // Update last login time; if the document doesn't exist yet, create/merge it.
+      try {
+        await updateDoc(userDocRef, {
+          lastLoginAt: serverTimestamp()
+        });
+      } catch (err) {
+        if (err instanceof FirebaseError && err.code === 'not-found') {
+          await setDoc(userDocRef, { lastLoginAt: serverTimestamp() }, { merge: true });
+        } else if (err instanceof Error && err.message.includes('No document to update')) {
+          // Fallback for emulator/legacy string error
+          await setDoc(userDocRef, { lastLoginAt: serverTimestamp() }, { merge: true });
+        } else {
+          throw err;
+        }
+      }
+      
+      // Build and return mapped user immediately so UI has data right after login
+      const mappedUser = await mapFirebaseUser(userCredential.user);
+      return { user: mappedUser, credential: userCredential };
+      
+    } catch (error) {
+      console.error('Login error:', error);
+      
+      // Handle specific Firebase auth errors
+      let errorMessage = 'Failed to log in. Please try again.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('wrong-password') || 
+            error.message.includes('user-not-found')) {
+          errorMessage = 'Invalid email or password.';
+        } else if (error.message.includes('too-many-requests')) {
+          errorMessage = 'Too many login attempts. Please try again later.';
+        } else if (error.message.includes('user-disabled')) {
+          errorMessage = 'This account has been disabled.';
+        }
+      }
+      
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // Store additional user data in Firestore
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
-        uid: userCredential.user.uid,
-        email,
-        displayName: name,
-        role,
-        createdAt: new Date().toISOString(),
+  const register = async (email: string, password: string, displayName: string, role: UserRole = 'student'): Promise<UserCredential> => {
+    setLoading(true);
+    
+    try {
+      const { auth, db } = getServices();
+      
+      // Validate input
+      if (!email || !password) {
+        throw new Error('Email and password are required');
+      }
+      
+      // Create user in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      if (!userCredential.user) {
+        throw new Error('Failed to create user account');
+      }
+      
+      // Update user profile with display name
+      await updateProfile(userCredential.user, {
+        // ignore await so offline mode won't reject
+      
+        displayName,
+        photoURL: null // Set to null initially, can be updated later
       });
-
+      
+      // Create user data object
+      const now = new Date();
+      const newUser: UserData = {
+        uid: userCredential.user.uid,
+        email: userCredential.user.email || email,
+        displayName: displayName.trim(),
+        photoURL: null, // Set to null initially, can be updated later
+        role,
+        emailVerified: userCredential.user.emailVerified,
+        createdAt: now,
+        updatedAt: now,
+        lastLoginAt: now
+      };
+      
+      // Attempt to create user document (skip errors when offline)
+      try {
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+          ...newUser,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          lastLoginAt: serverTimestamp()
+        });
+      } catch (fireErr) {
+        console.warn('Unable to create user document:', fireErr);
+      }
+      
+      // Remove manual state and cookie updates
+      // The onAuthStateChanged listener will handle setting the user and cookies
+      
       return userCredential;
     } catch (error) {
-      console.error("Error during registration:", error);
+      console.error('Registration error:', error);
+      
+      // Handle specific Firebase auth errors
+      let errorMessage = 'Failed to create account. Please try again.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('email-already-in-use')) {
+          errorMessage = 'This email is already in use. Please use a different email or log in.';
+        } else if (error.message.includes('weak-password')) {
+          errorMessage = 'The password is too weak. Please use a stronger password.';
+        } else if (error.message.includes('invalid-email')) {
+          errorMessage = 'The email address is not valid.';
+        }
+      }
+      
+      throw new Error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    const { auth } = getServices();
+    
+    if (!auth.currentUser) {
+      // If no user is logged in, just redirect to login
+      router.push('/auth/login');
+      return;
+    }
+    
+    try {
+      // Sign out from Firebase Auth
+      await signOut(auth);
+      
+      // Clear local user state
+      setUser(null);
+      // Remove auth cookies
+      Cookies.remove('auth-token', { path: '/' });
+      Cookies.remove('user-role', { path: '/' });
+      
+      // Redirect to login page
+      router.push('/auth/login');
+      
+      // Force a page reload to ensure all auth state is cleared
+      router.refresh();
+    } catch (error) {
+      console.error('Logout error:', error);
+      throw new Error('Failed to log out. Please try again.');
+    }
+  };
+
+  const updateUserProfile = async (updates: { displayName?: string; photoURL?: string }): Promise<void> => {
+    const { auth } = getServices();
+    const currentUser = auth.currentUser;
+    
+    if (!currentUser) {
+      throw new Error('No authenticated user');
+    }
+    
+    try {
+      // Ensure we have the latest user data
+      const userRef = doc(getFirestoreDb(), 'users', currentUser.uid);
+      
+      // Update Firebase Auth profile
+      await updateProfile(currentUser, updates);
+      
+      // Update Firestore user document
+      await updateDoc(userRef, {
+        ...updates,
+        updatedAt: serverTimestamp()
+      });
+      
+      // Convert Firestore timestamps to Date objects if needed
+      const safeGetDate = (date: any): Date => {
+        if (date === undefined || date === null) {
+          return new Date();
+        }
+        return typeof date.toDate === 'function' ? date.toDate() : new Date(date);
+      };
+
+      // Update local state with the complete user data
+      const updatedUser: UserData = {
+        ...user, // replaced userData with user
+        ...updates,
+        updatedAt: new Date(),
+        // Ensure required fields are preserved
+        uid: currentUser.uid,
+        email: currentUser.email || user?.email || null,
+        role: user?.role || 'student',
+        emailVerified: currentUser.emailVerified,
+        createdAt: safeGetDate(user?.createdAt),
+        lastLoginAt: safeGetDate(user?.lastLoginAt)
+      };
+      
+      setUser(updatedUser);
+    } catch (error) {
+      console.error('Error updating profile:', error);
       throw error;
     }
   };
 
-  const login = async (email: string, password: string) => {
-    if (isDemoMode) {
-      console.log('Demo mode: Simulating login for:', email);
-      // Simulate successful login
-      const demoUser: UserData = {
-        uid: 'demo-user-123',
-        email: email,
-        displayName: email.split('@')[0],
-        role: 'student',
-        photoURL: null
-      };
-
-      setUser(demoUser);
-
-      // Set demo cookies
-      Cookies.set('auth-token', 'demo-token', { expires: 1 });
-      Cookies.set('user-role', 'student', { expires: 1 });
-
-      return null;
-    }
-
-    return signInWithEmailAndPassword(auth, email, password);
-  };
-
-  const logout = async () => {
-    // Remove cookies before signout
-    Cookies.remove('auth-token');
-    Cookies.remove('user-role');
-
-    if (isDemoMode) {
-      console.log('Demo mode: Simulating logout');
-      setUser(null);
-      return;
-    }
-
-    return signOut(auth);
-  };
-
-  const updateUserProfile = async (displayName?: string, photoURL?: string) => {
-    if (isDemoMode) {
-      console.log('Demo mode: Simulating profile update');
-      if (user) {
-        const updatedUser = {
-          ...user,
-          ...(displayName && { displayName }),
-          ...(photoURL && { photoURL })
-        };
-        setUser(updatedUser);
-      }
-      return;
-    }
-
-    if (!auth.currentUser) throw new Error('No authenticated user');
-
-    const updates: { displayName?: string; photoURL?: string } = {};
-    if (displayName) updates.displayName = displayName;
-    if (photoURL) updates.photoURL = photoURL;
-
-    await updateProfile(auth.currentUser, updates);
-
-    // Update Firestore user data
-    if (Object.keys(updates).length > 0) {
-      await setDoc(doc(db, 'users', auth.currentUser.uid), updates, { merge: true });
-    }
+  const value = {
+    user,
+    loading,
+    login,
+    register,
+    logout,
+    updateUserProfile
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      loading,
-      register,
-      login,
-      logout,
-      updateUserProfile,
-      isDemoMode
-    }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
-};
+}
 
-export const useAuth = () => {
+// Export the auth context and hook
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
+
+// Helper function to get Firebase services
+const getServices = () => {
+  try {
+    // Skip if running on server
+    if (typeof window === 'undefined') {
+      throw new Error('Firebase services are not available on the server');
+    }
+    
+    const auth = getFirebaseAuth();
+    const db = getFirestoreDb();
+    
+    if (!auth) {
+      throw new Error('Firebase Auth is not properly initialized');
+    }
+    
+    if (!db) {
+      throw new Error('Firestore is not properly initialized');
+    }
+    
+    return { auth, db };
+  } catch (error) {
+    console.error('Error getting Firebase services:', error);
+    throw new Error('Failed to initialize Firebase services. Please check your configuration.');
+  }
+};
+
+export default AuthProvider;
+

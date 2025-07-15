@@ -14,8 +14,14 @@ import {
 import { FaChevronDown, FaBook, FaGraduationCap, FaQuestionCircle, FaPhoneAlt, FaUserGraduate } from "react-icons/fa";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
+import Image from "next/image";
+import { ThemeSwitcher } from "@/components/ui/theme-switcher";
 
-const MainNav = () => {
+interface MainNavProps {
+  onNavigate?: () => void;
+}
+
+const MainNav = ({ onNavigate }: MainNavProps) => {
   const pathname = usePathname();
   const { user } = useAuth();
 
@@ -29,7 +35,7 @@ const MainNav = () => {
     {
       href: "/courses",
       label: "Courses",
-      active: pathname === "/courses" || pathname.startsWith("/courses/"),
+      active: pathname ? (pathname === "/courses" || pathname.startsWith("/courses/")) : false,
       icon: <FaBook className="h-4 w-4 mr-2" />,
       children: [
         {
@@ -56,16 +62,38 @@ const MainNav = () => {
           href: "/courses?level=C2",
           label: "C2 - Proficiency",
         },
+      ],
+    },
+    {
+      href: "/learn",
+      label: "Learn",
+      active: pathname ? pathname.startsWith("/learn") : false,
+      icon: <FaGraduationCap className="h-4 w-4 mr-2" />,
+      children: [
         {
-          href: "/courses?format=online",
-          label: "Online Courses",
+          href: "/learn/vocabulary",
+          label: "Vocabulary",
         },
         {
-          href: "/courses?format=hybrid",
-          label: "Hybrid Courses",
+          href: "/learn/grammar",
+          label: "Grammar",
+        },
+        {
+          href: "/learn/pronunciation",
+          label: "Pronunciation",
+        },
+        {
+          href: "/placement-test",
+          label: "Placement Test",
         },
       ],
     },
+    ...(user ? [{
+      href: "/resources",
+      label: "Resources",
+      active: pathname ? pathname.startsWith("/resources") : false,
+      icon: <FaBook className="h-4 w-4 mr-2" />,
+    }] : []),
     {
       href: "/about",
       label: "About Us",
@@ -93,7 +121,7 @@ const MainNav = () => {
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className={`text-sm font-medium transition-colors hover:text-primary flex items-center gap-1 ${
+              className={`text-sm font-medium transition-colors hover:text-primary hover-lift flex items-center gap-1 ${
                 route.active
                   ? "text-primary"
                   : "text-muted-foreground"
@@ -104,7 +132,11 @@ const MainNav = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             {route.children.map((child) => (
-              <DropdownMenuItem key={child.href} asChild>
+              <DropdownMenuItem
+                  key={child.href}
+                  asChild
+                  className="focus:bg-primary focus:text-white hover:bg-primary hover:text-white"
+                >
                 <Link href={child.href} className="w-full">
                   {child.label}
                 </Link>
@@ -119,7 +151,7 @@ const MainNav = () => {
       <Link
         key={route.href}
         href={route.href}
-        className={`text-sm font-medium transition-colors hover:text-primary ${
+        className={`text-sm font-medium transition-colors hover:text-primary hover-lift ${
           route.active ? "text-primary" : "text-muted-foreground"
         }`}
       >
@@ -134,7 +166,7 @@ const MainNav = () => {
       <Link
         key="admin"
         href="/admin"
-        className={`text-sm font-medium transition-colors hover:text-primary hidden md:inline-block ${
+        className={`text-sm font-medium transition-colors hover:text-primary hover-lift hidden md:inline-block ${
           pathname.startsWith("/admin") ? "text-primary" : "text-muted-foreground"
         }`}
       >
@@ -146,7 +178,7 @@ const MainNav = () => {
       <Link
         key="dashboard"
         href="/dashboard"
-        className={`text-sm font-medium transition-colors hover:text-primary hidden md:inline-block ${
+        className={`text-sm font-medium transition-colors hover:text-primary hover-lift hidden md:inline-block ${
           pathname.startsWith("/dashboard") ? "text-primary" : "text-muted-foreground"
         }`}
       >
@@ -155,86 +187,110 @@ const MainNav = () => {
     );
   }
 
-  // Mobile navigation
-  const mobileNav = (
-    <Sheet>
-      <SheetTrigger asChild className="md:hidden">
-        <Button variant="ghost" size="icon" className="h-9 w-9">
-          <Menu className="h-5 w-5" />
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="left" className="w-[300px] sm:w-[400px]">
-        <div className="flex flex-col gap-4 py-4">
-          {routes.map((route) => {
-            if (route.children) {
-              return (
-                <div key={route.href} className="space-y-3">
-                  <div className="font-medium flex items-center">
-                    {route.icon}
-                    {route.label}
-                  </div>
-                  <div className="pl-6 space-y-2">
-                    {route.children.map((child) => (
-                      <Link
-                        key={child.href}
-                        href={child.href}
-                        className="block text-muted-foreground hover:text-primary"
-                      >
-                        {child.label}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              );
-            }
-
-            return (
-              <Link
-                key={route.href}
-                href={route.href}
-                className={`font-medium flex items-center ${
-                  route.active ? "text-primary" : "text-foreground"
-                }`}
-              >
-                {route.icon}
-                {route.label}
-              </Link>
-            );
-          })}
-          <DropdownMenuSeparator />
-          {user && user.role === 'admin' && (
-            <Link
-              href="/admin"
-              className="font-medium flex items-center"
-            >
-              <FaGraduationCap className="h-4 w-4 mr-2" />
-              Admin Dashboard
-            </Link>
-          )}
-          {user && user.role === 'student' && (
-            <Link
-              href="/dashboard"
-              className="font-medium flex items-center"
-            >
-              <FaGraduationCap className="h-4 w-4 mr-2" />
-              My Dashboard
-            </Link>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-
   return (
-    <nav className="flex-1 flex items-center">
-      <div className="hidden md:flex mx-6 items-center space-x-4 lg:space-x-6">
+    <nav className="flex-1 flex items-center overflow-x-auto whitespace-nowrap">
+      {/* Desktop Navigation */}
+      <div className="hidden md:flex mx-4 items-center space-x-3 lg:space-x-6">
         {navigationLinks}
       </div>
-      <div className="ml-auto md:hidden flex items-center">
-        {mobileNav}
+      
+      {/* Mobile Navigation Toggle */}
+      <div className="md:hidden ml-auto">
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-10 w-10">
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Toggle menu</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="w-[300px] sm:w-[400px] p-0">
+            <div className="flex flex-col h-full">
+              <div className="p-6 border-b">
+                <Link href="/" className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Image 
+                      src="/images/EB_LOGO_.jpg" 
+                      alt="Logo" 
+                      width={24} 
+                      height={24} 
+                      className="object-contain" 
+                    />
+                  </div>
+                  <span className="text-lg font-bold text-primary">L'école Bibliothèque</span>
+                </Link>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {routes.map((route) => (
+                  <div key={route.href} className="space-y-2">
+                    {route.children ? (
+                      <div className="space-y-2">
+                        <div className="font-medium text-foreground/80 flex items-center">
+                          {route.icon}
+                          {route.label}
+                        </div>
+                        <div className="pl-6 space-y-3">
+                          {route.children.map((child) => (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              onClick={onNavigate}
+                              className={cn(
+                                "block py-1.5 text-sm",
+                                pathname === child.href
+                                  ? "text-primary font-medium"
+                                  : "text-muted-foreground hover:text-foreground"
+                              )}
+                            >
+                              {child.label}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <Link
+                        href={route.href}
+                        className={`flex items-center py-2 text-sm font-medium ${
+                          route.active 
+                            ? 'text-primary' 
+                            : 'text-foreground/80 hover:text-foreground'
+                        }`}
+                      >
+                        {route.icon}
+                        <span className="ml-2">{route.label}</span>
+                      </Link>
+                    )}
+                  </div>
+                ))}
+
+                {(user?.role === 'admin' || user?.role === 'student') && (
+                  <div className="pt-4 border-t mt-4">
+                    <Link
+                      href={user.role === 'admin' ? '/admin' : '/dashboard'}
+                      className={`flex items-center py-2 text-sm font-medium ${
+                        pathname.startsWith(user.role === 'admin' ? '/admin' : '/dashboard')
+                          ? 'text-primary'
+                          : 'text-foreground/80 hover:text-foreground'
+                      }`}
+                    >
+                      <FaGraduationCap className="h-4 w-4" />
+                      <span className="ml-2">
+                        {user.role === 'admin' ? 'Admin Dashboard' : 'My Dashboard'}
+                      </span>
+                    </Link>
+                  </div>
+                )}
+              </div>
+              
+              <div className="p-6 border-t">
+                <ThemeSwitcher />
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </nav>
   );
 };
 
 export default MainNav;
+

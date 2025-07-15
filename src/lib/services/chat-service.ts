@@ -1,4 +1,4 @@
-import { db } from '@/config/firebase';
+﻿import { db } from '@/config/firebase';
 import type { Message } from '@/lib/types';
 import {
   collection,
@@ -178,3 +178,4 @@ export const subscribeToMessages = (
     callback(messages);
   });
 };
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   createContext,
@@ -8,7 +8,7 @@ import {
   ReactNode,
 } from "react";
 import { useAuth } from "./auth-context";
-import { db } from "@/config/firebase";
+import { getFirestoreDb } from "@/config/firebase";
 import {
   collection,
   query,
@@ -40,72 +40,82 @@ export const RealtimeProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!user) return;
 
-    // Subscribe to unread messages
-    const messagesQuery = query(
-      collection(db, "messages"),
-      where("recipientId", "==", user.uid),
-      where("read", "==", false),
-      orderBy("createdAt", "desc")
-    );
+    let unsubscribeMessages = () => {};
+    let unsubscribeNotifications = () => {};
+    let unsubscribeEnrollments = () => {};
 
-    const unsubscribeMessages = onSnapshot(messagesQuery, (snapshot) => {
-      setUnreadMessages(snapshot.size);
-      if (snapshot.docs[0]) {
-        setLatestMessage({
-          id: snapshot.docs[0].id,
-          ...snapshot.docs[0].data(),
-        } as Message);
-      }
-    });
+    try {
+      const db = getFirestoreDb();
+      
+      // Subscribe to unread messages
+      const messagesQuery = query(
+        collection(db, "messages"),
+        where("recipientId", "==", user.uid),
+        where("read", "==", false),
+        orderBy("createdAt", "desc")
+      );
 
-    // Subscribe to unread notifications
-    const notificationsQuery = query(
-      collection(db, "notifications"),
-      where("userId", "==", user.uid),
-      where("read", "==", false),
-      orderBy("createdAt", "desc")
-    );
+      unsubscribeMessages = onSnapshot(messagesQuery, (snapshot) => {
+        setUnreadMessages(snapshot.size);
+        if (snapshot.docs[0]) {
+          setLatestMessage({
+            id: snapshot.docs[0].id,
+            ...snapshot.docs[0].data(),
+          } as Message);
+        }
+      });
 
-    const unsubscribeNotifications = onSnapshot(notificationsQuery, (snapshot) => {
-      setUnreadNotifications(snapshot.size);
-      if (snapshot.docs[0]) {
-        setLatestNotification({
-          id: snapshot.docs[0].id,
-          ...snapshot.docs[0].data(),
-        } as Notification);
-      }
-    });
+      // Subscribe to unread notifications
+      const notificationsQuery = query(
+        collection(db, "notifications"),
+        where("userId", "==", user.uid),
+        where("read", "==", false),
+        orderBy("createdAt", "desc")
+      );
 
-    // Subscribe to course updates for enrolled courses
-    const enrollmentsQuery = query(
-      collection(db, "enrollments"),
-      where("userId", "==", user.uid)
-    );
+      unsubscribeNotifications = onSnapshot(notificationsQuery, (snapshot) => {
+        setUnreadNotifications(snapshot.size);
+        if (snapshot.docs[0]) {
+          setLatestNotification({
+            id: snapshot.docs[0].id,
+            ...snapshot.docs[0].data(),
+          } as Notification);
+        }
+      });
 
-    const unsubscribeEnrollments = onSnapshot(enrollmentsQuery, (snapshot) => {
-      const courseIds = snapshot.docs.map((doc) => doc.data().courseId);
+      // Subscribe to course updates for enrolled courses
+      const enrollmentsQuery = query(
+        collection(db, "enrollments"),
+        where("userId", "==", user.uid)
+      );
 
-      if (courseIds.length > 0) {
-        const coursesQuery = query(
-          collection(db, "course_updates"),
-          where("courseId", "in", courseIds),
-          orderBy("createdAt", "desc"),
-          limit(10)
-        );
+      unsubscribeEnrollments = onSnapshot(enrollmentsQuery, (snapshot) => {
+        const courseIds = snapshot.docs.map((doc) => doc.data().courseId);
 
-        const unsubscribeCourses = onSnapshot(coursesQuery, (updateSnapshot) => {
-          const updates = updateSnapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-          setCourseUpdates(updates);
-        });
+        if (courseIds.length > 0) {
+          const coursesQuery = query(
+            collection(db, "course_updates"),
+            where("courseId", "in", courseIds),
+            orderBy("createdAt", "desc"),
+            limit(10)
+          );
 
-        return () => {
-          unsubscribeCourses();
-        };
-      }
-    });
+          const unsubscribeCourses = onSnapshot(coursesQuery, (updateSnapshot) => {
+            const updates = updateSnapshot.docs.map((doc) => ({
+              id: doc.id,
+              ...doc.data(),
+            }));
+            setCourseUpdates(updates);
+          });
+
+          return () => {
+            unsubscribeCourses();
+          };
+        }
+      });
+    } catch (error) {
+      console.error('Error setting up realtime listeners:', error);
+    }
 
     return () => {
       unsubscribeMessages();
@@ -136,3 +146,4 @@ export const useRealtime = () => {
   }
   return context;
 };
+

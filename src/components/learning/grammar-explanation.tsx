@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -84,7 +84,7 @@ export default function GrammarExplanation({ grammar }: GrammarExplanationProps)
                   {rule.title}
                 </CardTitle>
                 <div className="text-xl">
-                  {expandedRules.has(index) ? "−" : "+"}
+                  {expandedRules.has(index) ? "âˆ’" : "+"}
                 </div>
               </div>
             </CardHeader>
@@ -126,3 +126,4 @@ export default function GrammarExplanation({ grammar }: GrammarExplanationProps)
     </div>
   );
 }
+

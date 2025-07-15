@@ -41,12 +41,12 @@ import {
 
 // Course level image mapping
 const COURSE_IMAGES = {
-  "A1": "https://images.unsplash.com/photo-1505902987837-9e40ec37e607?q=80&w=1740&auto=format&fit=crop",
-  "A2": "https://images.unsplash.com/photo-1549737221-bef65e2604a6?q=80&w=1740&auto=format&fit=crop",
-  "B1": "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?q=80&w=1740&auto=format&fit=crop",
-  "B2": "https://images.unsplash.com/photo-1563293756-4ee5996e3a78?q=80&w=1740&auto=format&fit=crop",
-  "C1": "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?q=80&w=1740&auto=format&fit=crop",
-  "C2": "https://images.unsplash.com/photo-1599753894977-834afcf35d32?q=80&w=1740&auto=format&fit=crop",
+  "A1": "/images/a1-beginner.jpg",
+  "A2": "/images/a2-elementary.jpg",
+  "B1": "/images/b1-intermediate.jpg",
+  "B2": "/images/b2-upper-intermediate.jpg",
+  "C1": "/images/c1-advanced.jpg",
+  "C2": "/images/c2-proficient.jpg",
 };
 
 export default function CourseEnrollmentPage({ params }: { params: { courseId: string } }) {
@@ -451,3 +451,4 @@ export default function CourseEnrollmentPage({ params }: { params: { courseId: s
     </MainLayout>
   );
 }
+

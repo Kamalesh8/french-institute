@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -273,3 +273,4 @@ export default function PronunciationGuide({ audioSamples }: PronunciationGuideP
     </div>
   );
 }
+

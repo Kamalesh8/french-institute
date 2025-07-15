@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
@@ -160,3 +160,4 @@ export default function ChatInterface({ recipientId, courseId }: ChatInterfacePr
     </div>
   );
 }
+

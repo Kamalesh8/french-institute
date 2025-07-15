@@ -8,6 +8,9 @@ const {
 } = require('firebase/firestore');
 const { getAuth, createUserWithEmailAndPassword, updateProfile } = require('firebase/auth');
 
+// Load environment variables
+require('dotenv').config({ path: require('path').join(__dirname, '../.env.local') });
+
 // Configure your Firebase
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -17,6 +20,14 @@ const firebaseConfig = {
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
+
+// Validate configuration
+Object.entries(firebaseConfig).forEach(([key, value]) => {
+  if (!value && key !== 'measurementId') { // measurementId is optional
+    console.error(`Firebase configuration missing: ${key}`);
+    throw new Error(`Firebase configuration missing: ${key}`);
+  }
+});
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -31,6 +42,14 @@ async function createSampleUsers() {
     // Create admin user
     const adminEmail = 'admin@frenchinstitute.com';
     const adminPassword = 'Admin123!';
+    
+    // Check if admin user already exists
+    const adminUser = await auth.fetchSignInMethodsForEmail(adminEmail);
+    if (adminUser.length > 0) {
+      console.log('Admin user already exists');
+      return;
+    }
+
     const adminCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPassword);
 
     await updateProfile(adminCredential.user, { displayName: 'Admin User' });

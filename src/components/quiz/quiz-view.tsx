@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -94,12 +94,10 @@ export default function QuizView({ quizId, userId }: QuizViewProps) {
 
       toast({
         title: "Quiz Submitted",
-        description: \`You scored \${result.score} out of \${result.maxScore} points\${
-          result.passed ? " and passed!" : "."
-        }\`,
+        description: `You scored ${result.score} out of ${result.maxScore} points${result.passed ? ' and passed!' : '.'}`,
       });
 
-      router.push(\`/courses/\${quiz.courseId}/quizzes/\${quizId}/result\`);
+      router.push(`/courses/${quiz.courseId}/quizzes/${quizId}/result`);
     } catch (error) {
       toast({
         title: "Error",
@@ -192,3 +190,4 @@ export default function QuizView({ quizId, userId }: QuizViewProps) {
     </Card>
   );
 }
+

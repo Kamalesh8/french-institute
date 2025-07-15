@@ -17,7 +17,7 @@ export interface User {
 export type CourseLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
 // Course format types
-export type CourseFormat = 'online' | 'hybrid' | 'in-person';
+export type CourseFormat = 'online';
 
 // Course schedule types
 export type CourseSchedule = 'morning' | 'afternoon' | 'evening' | 'weekend' | 'flexible';
@@ -239,3 +239,4 @@ export interface Payment {
   createdAt: string;
   updatedAt: string;
 }
+

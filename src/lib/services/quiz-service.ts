@@ -1,4 +1,4 @@
-import { db } from '@/config/firebase';
+﻿import { getFirestoreDb } from '@/config/firebase';
 import type { Quiz, QuizQuestion, QuizAttempt, QuizAnswer } from '@/lib/types';
 import {
   collection,
@@ -19,6 +19,7 @@ const ATTEMPTS_COLLECTION = 'quiz_attempts';
 
 // Create a new quiz
 export const createQuiz = async (quizData: Omit<Quiz, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const db = getFirestoreDb();
   const quizRef = await addDoc(collection(db, QUIZZES_COLLECTION), {
     ...quizData,
     createdAt: serverTimestamp(),
@@ -29,7 +30,8 @@ export const createQuiz = async (quizData: Omit<Quiz, 'id' | 'createdAt' | 'upda
 };
 
 // Get a quiz by ID
-export const getQuizById = async (quizId: string) => {
+export const getQuizById = async (quizId: string): Promise<Quiz | null> => {
+  const db = getFirestoreDb();
   const quizDoc = await getDoc(doc(db, QUIZZES_COLLECTION, quizId));
   
   if (!quizDoc.exists()) {
@@ -47,6 +49,7 @@ export const getQuizById = async (quizId: string) => {
 
 // Update a quiz
 export const updateQuiz = async (quizId: string, updates: Partial<Quiz>) => {
+  const db = getFirestoreDb();
   const quizRef = doc(db, QUIZZES_COLLECTION, quizId);
   
   await updateDoc(quizRef, {
@@ -59,12 +62,14 @@ export const updateQuiz = async (quizId: string, updates: Partial<Quiz>) => {
 
 // Delete a quiz
 export const deleteQuiz = async (quizId: string) => {
+  const db = getFirestoreDb();
   await deleteDoc(doc(db, QUIZZES_COLLECTION, quizId));
   return true;
 };
 
 // Get quizzes for a course
 export const getCourseQuizzes = async (courseId: string) => {
+  const db = getFirestoreDb();
   const q = query(
     collection(db, QUIZZES_COLLECTION),
     where('courseId', '==', courseId),
@@ -89,6 +94,7 @@ export const getCourseQuizzes = async (courseId: string) => {
 
 // Start a quiz attempt
 export const startQuizAttempt = async (quizId: string, userId: string) => {
+  const db = getFirestoreDb();
   const attemptRef = await addDoc(collection(db, ATTEMPTS_COLLECTION), {
     quizId,
     userId,
@@ -110,6 +116,7 @@ export const submitQuizAttempt = async (
   answers: QuizAnswer[],
   endTime: string
 ) => {
+  const db = getFirestoreDb();
   const attemptRef = doc(db, ATTEMPTS_COLLECTION, attemptId);
   const attemptDoc = await getDoc(attemptRef);
   
@@ -157,6 +164,7 @@ export const submitQuizAttempt = async (
 
 // Get quiz attempts for a user
 export const getUserQuizAttempts = async (userId: string, quizId?: string) => {
+  const db = getFirestoreDb();
   let q = query(
     collection(db, ATTEMPTS_COLLECTION),
     where('userId', '==', userId),
@@ -190,3 +198,4 @@ const arraysEqual = (a: string[], b: string[]) => {
   const sortedB = [...b].sort();
   return sortedA.every((val, idx) => val === sortedB[idx]);
 };
+

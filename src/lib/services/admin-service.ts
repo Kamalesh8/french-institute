@@ -76,9 +76,7 @@ export const getCourseStatistics = async () => {
         { level: 'C2', count: 8 }
       ],
       coursesByFormat: [
-        { format: 'online', count: 8 },
-        { format: 'hybrid', count: 4 },
-        { format: 'in-person', count: 2 }
+        { format: 'online', count: 8 }
       ]
     };
   } catch (error) {
@@ -280,3 +278,4 @@ export const getStudentLevelDistribution = async () => {
     throw error;
   }
 };
+

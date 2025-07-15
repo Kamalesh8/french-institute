@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Allow users to read their own profile
+    match /users/{userId} {
+      allow read: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
+    }
+    
+    // Roles collection - temporarily allow read for all authenticated users
+    match /roles/{userId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+    
+    // Courses - teachers can manage their courses
+    match /courses/{courseId} {
+      allow read: if request.auth != null;
+      allow create, update: if isTeacher() || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Messaging and notifications
+    match /messages/{messageId} {
+      allow read: if request.auth != null && resource.data.recipientId == request.auth.uid;
+      // Writes handled via server SDK / Cloud Functions
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // User enrollments
+    match /enrollments/{enrollmentId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Course updates visible to enrolled students, teachers or admins
+    match /course_updates/{updateId} {
+      allow read: if request.auth != null;
+    }
+    
+    // Pronunciation guides - public read access
+    match /pronunciation_guides/{guideId} {
+      allow read: if true;  // Public access
+      allow write: if isAdmin() || isTeacher();  // Only admins/teachers can modify
+    }
+
+    // Language learning resources (grammar, vocabulary etc.)
+    match /resources/{category} {
+      // Public read access (resources are educational content)
+      allow read: if true;
+      // Only teachers or admins can create/update
+      allow create, update, delete: if isTeacher() || isAdmin();
+    }
+    
+    // Helper functions
+    function isAdmin() {
+      // Allow if a matching document exists OR if the token has the claim
+      return getRole() == 'admin' || request.auth.token.role == 'admin';
+    }
+    
+    function isTeacher() {
+      return getRole() == 'teacher' || request.auth.token.role == 'teacher' || isAdmin();
+    }
+    
+    function getRole() {
+
+      return exists(/databases/$(database)/documents/roles/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.role
+        : 'user';
+    }
+  }
+}

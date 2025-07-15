@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/context/auth-context";
 import MainLayout from "@/components/layout/main-layout";
+import ProtectedRoute from "@/components/auth/protected-route";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -29,40 +31,58 @@ import {
   FaBell,
   FaRocket
 } from "react-icons/fa";
+import { ProgressDashboard } from "@/components/dashboard/progress-dashboard";
 
 // Course level image mapping
 const COURSE_IMAGES = {
-  "A1": "https://images.unsplash.com/photo-1505902987837-9e40ec37e607?q=80&w=1740&auto=format&fit=crop",
-  "A2": "https://images.unsplash.com/photo-1549737221-bef65e2604a6?q=80&w=1740&auto=format&fit=crop",
-  "B1": "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?q=80&w=1740&auto=format&fit=crop",
-  "B2": "https://images.unsplash.com/photo-1563293756-4ee5996e3a78?q=80&w=1740&auto=format&fit=crop",
-  "C1": "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?q=80&w=1740&auto=format&fit=crop",
-  "C2": "https://images.unsplash.com/photo-1599753894977-834afcf35d32?q=80&w=1740&auto=format&fit=crop",
+  "A1": "/images/a1-beginner.jpg",
+  "A2": "/images/a2-elementary.jpg",
+  "B1": "/images/b1-intermediate.jpg",
+  "B2": "/images/b2-upper-intermediate.jpg",
+  "C1": "/images/c1-advanced.jpg",
+  "C2": "/images/c2-proficient.jpg",
 };
 
-export default function StudentDashboard() {
+function DashboardContent() {
   const { user } = useAuth();
+  const { data: session, status } = useSession();
+
+  // Build a unified user object from Firebase or NextAuth session
+  const currentUser = user || (status === "authenticated" ? {
+    // note: NextAuth users are not authenticated with Firebase so Firestore client calls may fail
+
+    uid: (session.user as any).id,
+    email: session.user.email,
+    displayName: session.user.name,
+    role: (session.user as any).role || "student",
+    photoURL: session.user.image
+  } : null);
   const router = useRouter();
   const [enrollments, setEnrollments] = useState<Array<Enrollment & { course: Course }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("courses");
+  
+  // Show nothing only when we truly have no authenticated context
+  if (status === "unauthenticated" && !user) {
+    return null; // ProtectedRoute will handle redirection
+  }
 
   useEffect(() => {
-    if (!user) {
-      router.push("/auth/login");
-      return;
-    }
-
-    if (user.role === "admin") {
+    if (status === "authenticated" && session.user.role === "admin") {
       router.push("/admin");
       return;
     }
 
+    if (!user) {
+      // If we're not signed into Firebase, skip Firestore client queries
+      setIsLoading(false);
+      return;
+    }
     const fetchEnrollments = async () => {
       setIsLoading(true);
       try {
         // Get all enrollments for the current user
-        const userEnrollments = await getUserEnrollments(user.uid);
+        const userEnrollments = await getUserEnrollments(currentUser.uid);
 
         // Get the course details for each enrollment
         const enrollmentsWithCourses = await Promise.all(
@@ -84,7 +104,7 @@ export default function StudentDashboard() {
     };
 
     fetchEnrollments();
-  }, [user, router]);
+  }, [user, currentUser, status, router]);
 
   // Mock data for the dashboard
   const upcomingLessons = [
@@ -94,7 +114,7 @@ export default function StudentDashboard() {
       date: "Monday, April 15, 2024",
       time: "10:00 AM - 11:30 AM",
       course: "A1 - Beginner French",
-      image: "https://images.unsplash.com/photo-1551704862-66d2abe3f94f?q=80&w=1740&auto=format&fit=crop"
+      image: "/images/lesson-1.jpg"
     },
     {
       id: "lesson-2",
@@ -102,7 +122,7 @@ export default function StudentDashboard() {
       date: "Wednesday, April 17, 2024",
       time: "10:00 AM - 11:30 AM",
       course: "A1 - Beginner French",
-      image: "https://images.unsplash.com/photo-1544703432-78fe9ba48d4a?q=80&w=1974&auto=format&fit=crop"
+      image: "/images/lesson-2.jpg"
     },
     {
       id: "lesson-3",
@@ -110,7 +130,7 @@ export default function StudentDashboard() {
       date: "Friday, April 19, 2024",
       time: "10:00 AM - 11:30 AM",
       course: "A1 - Beginner French",
-      image: "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?q=80&w=1740&auto=format&fit=crop"
+      image: "/images/lesson-3.jpg"
     }
   ];
 
@@ -157,7 +177,7 @@ export default function StudentDashboard() {
     }
   ];
 
-  if (!user) {
+  if (!currentUser) {
     return null; // Will redirect in useEffect
   }
 
@@ -195,7 +215,7 @@ export default function StudentDashboard() {
         <div className="container">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold mb-2">{getGreeting()}, {user.displayName?.split(' ')[0] || 'Student'}</h1>
+              <h1 className="text-2xl md:text-3xl font-bold mb-2">{getGreeting()}, {currentUser.displayName?.split(' ')[0] || 'Student'}</h1>
               <p className="text-white/80">
                 {enrollments.length > 0
                   ? `You're making great progress! Continue your French learning journey.`
@@ -208,7 +228,7 @@ export default function StudentDashboard() {
                 <Link href="/courses">Browse Courses</Link>
               </Button>
               <Button className="bg-white text-primary hover:bg-white/90" asChild>
-                <Link href="/dashboard/profile">My Profile</Link>
+                <Link href="/profile">My Profile</Link>
               </Button>
             </div>
           </div>
@@ -346,6 +366,9 @@ export default function StudentDashboard() {
                 <TabsTrigger value="schedule" className="py-2 data-[state=active]:bg-primary data-[state=active]:text-white">
                   Schedule
                 </TabsTrigger>
+                <TabsTrigger value="progress" className="py-2 data-[state=active]:bg-primary data-[state=active]:text-white">
+                  Progress
+                </TabsTrigger>
                 <TabsTrigger value="achievements" className="py-2 data-[state=active]:bg-primary data-[state=active]:text-white">
                   Achievements
                 </TabsTrigger>
@@ -440,6 +463,11 @@ export default function StudentDashboard() {
                     </div>
                   )}
                 </div>
+              </TabsContent>
+
+              {/* Progress tab */}
+              <TabsContent value="progress">
+                <ProgressDashboard />
               </TabsContent>
 
               {/* Schedule tab */}
@@ -567,3 +595,12 @@ export default function StudentDashboard() {
     </MainLayout>
   );
 }
+
+export default function DashboardPage() {
+  return (
+    <ProtectedRoute>
+      <DashboardContent />
+    </ProtectedRoute>
+  );
+}
+

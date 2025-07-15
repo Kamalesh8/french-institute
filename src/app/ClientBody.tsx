@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect } from "react";
 import MainLayout from "@/components/layout/main-layout";
@@ -16,3 +16,4 @@ export default function ClientBody({ children }: { children: React.ReactNode }) 
     </MainLayout>
   );
 }
+

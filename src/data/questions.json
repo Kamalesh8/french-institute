@@ -1,4 +1,4 @@
-[
+﻿[
   {
     "id": "a1-beginner-module-1-quiz-q1",
     "quizId": "a1-beginner-module-1-quiz",
@@ -8,7 +8,7 @@
       "Bonjour",
       "Au revoir",
       "Merci",
-      "S'il vous plaît"
+      "S'il vous plaÃ®t"
     ],
     "correctAnswer": "Bonjour",
     "points": 10,
@@ -49,3 +49,4 @@
     "updatedAt": "2025-04-15T15:29:28.061Z"
   }
 ]
+

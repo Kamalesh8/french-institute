@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { collection, query, getDocs, doc, getDoc, where, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { useAuth } from '@/context/auth-context';
@@ -206,3 +206,4 @@ export const useCourses = () => {
     getEnrolledCourses,
   };
 };
+

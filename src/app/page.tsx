@@ -19,9 +19,14 @@ import {
   FaMapMarkerAlt,
   FaUsers
 } from "react-icons/fa";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { faqs as sharedFaqs } from "@/constants/faqs";
+import useScrollReveal from "@/hooks/use-scroll-reveal";
+
 
 export default function Home() {
+  // apply reveal on mount
+  useScrollReveal();
   const [activeFAQ, setActiveFAQ] = useState<number | null>(null);
 
   const toggleFAQ = (index: number) => {
@@ -74,7 +79,7 @@ export default function Home() {
       level: 'A1',
       duration: '8 weeks',
       format: 'Online',
-      image: 'https://images.unsplash.com/photo-1505902987837-9e40ec37e607?q=80&w=1740&auto=format&fit=crop'
+      image: '/images/a1-beginner.jpg'
     },
     {
       id: 'a2-elementary',
@@ -84,7 +89,7 @@ export default function Home() {
       level: 'A2',
       duration: '10 weeks',
       format: 'Online',
-      image: 'https://images.unsplash.com/photo-1549737221-bef65e2604a6?q=80&w=1740&auto=format&fit=crop'
+      image: '/images/a2-elementary.jpg'
     },
     {
       id: 'b1-intermediate',
@@ -94,7 +99,7 @@ export default function Home() {
       level: 'B1',
       duration: '12 weeks',
       format: 'Online',
-      image: 'https://images.unsplash.com/photo-1503917988258-f87a78e3c995?q=80&w=1740&auto=format&fit=crop'
+      image: '/images/b1-intermediate.jpg'
     },
     {
       id: 'b2-upper-intermediate',
@@ -104,94 +109,110 @@ export default function Home() {
       level: 'B2',
       duration: '14 weeks',
       format: 'Online',
-      image: 'https://images.unsplash.com/photo-1563293756-4ee5996e3a78?q=80&w=1740&auto=format&fit=crop'
+      image: '/images/b2-upper-intermediate.jpg'
     }
   ];
+
+  // Animated counter helper component
+  const Counter = ({ end, suffix = "", duration = 2, start = false }: { end: number; suffix?: string; duration?: number; start?: boolean }) => {
+    const [count, setCount] = useState(0);
+
+    useEffect(() => {
+      if (!start) {
+        setCount(0);
+        return;
+      }
+      let startTimestamp: number | null = null;
+      const step = (timestamp: number) => {
+        if (startTimestamp === null) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / (duration * 1000), 1);
+        setCount(Math.floor(progress * end));
+        if (progress < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }, [start, end, duration]);
+
+    return <span>{count.toLocaleString()}{suffix}</span>;
+  };
 
   const stats = [
-    { value: "10,000+", label: "Students Worldwide", icon: <FaUsers /> },
-    { value: "97%", label: "Success Rate", icon: <FaCheckCircle /> },
-    { value: "100+", label: "Expert Instructors", icon: <FaChalkboardTeacher /> },
-    { value: "25+", label: "Countries Served", icon: <FaMapMarkerAlt /> }
+    { end: 10000, suffix: "+", label: "Students Worldwide", icon: <FaUsers /> },
+    { end: 97, suffix: "%", label: "Success Rate", icon: <FaCheckCircle /> },
+    { end: 100, suffix: "+", label: "Expert Instructors", icon: <FaChalkboardTeacher /> },
+    { end: 25, suffix: "+", label: "Countries Served", icon: <FaMapMarkerAlt /> }
   ];
 
-  const faqs = [
-    {
-      question: "How long does it take to learn French?",
-      answer: "Learning time varies based on your starting level, learning intensity, and goals. Generally, it takes about 6 months to reach A1 level (beginner), and 2-3 years to reach fluency (B2/C1 level) with consistent practice."
-    },
-    {
-      question: "Do I need previous French experience to enroll?",
-      answer: "Not at all! We offer courses from absolute beginner (A1) to advanced (C2) levels. We'll help you determine the right starting point with a free placement test."
-    },
-    {
-      question: "How are the online courses structured?",
-      answer: "Our online courses include live instructor-led sessions, self-paced modules with video lessons, interactive exercises, assignments, and regular assessment. You'll also have access to our community for conversation practice."
-    },
-    {
-      question: "Are the certificates internationally recognized?",
-      answer: "Yes, our certificates follow the CEFR (Common European Framework of Reference for Languages) standards and are recognized internationally for academic and professional purposes."
-    },
-    {
-      question: "What's the difference between online and hybrid courses?",
-      answer: "Online courses are 100% virtual, with live sessions and self-paced learning. Hybrid courses combine online learning with occasional in-person sessions at our physical locations for immersive practice."
-    },
-    {
-      question: "What happens if I miss a class?",
-      answer: "All live sessions are recorded and available for review. You can also schedule a brief catch-up session with an instructor if needed."
-    }
-  ];
+  // Observe stats section visibility
+  const statsSectionRef = useRef<HTMLDivElement>(null);
+  const [statsVisible, setStatsVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        setStatsVisible(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.3 });
+    if (statsSectionRef.current) observer.observe(statsSectionRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const faqs = sharedFaqs;
 
   return (
     <MainLayout>
       {/* Hero Section */}
-      <section className="bg-gradient-purple relative overflow-hidden">
+      <section className="bg-gradient-purple relative overflow-hidden opacity-0 translate-y-6 transition-all duration-700" data-reveal>
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1502602898657-3e91760cbb34?q=80&w=2073&auto=format&fit=crop')] bg-no-repeat bg-cover"></div>
+          <div className="absolute inset-0 bg-[url('/images/hero-bg.jpg')] bg-no-repeat bg-cover"></div>
         </div>
-        <div className="container mx-auto px-4 py-20 lg:py-24 relative z-10">
+        <div className="container mx-auto px-4 py-20 opacity-0 translate-y-6 transition-all duration-700" data-reveal>
           <div className="flex flex-col lg:flex-row items-center">
             <div className="lg:w-1/2 mb-12 lg:mb-0">
               <div className="flex items-center gap-2 mb-4 bg-white/20 text-white px-4 py-2 rounded-full w-fit">
                 <FaStar className="text-yellow-300" /> Top-rated French courses by native speakers
               </div>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-white leading-tight">
-                Learn French with <span className="text-yellow-300">Expert Guidance</span>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6 leading-tight">
+                <span className="text-white drop-shadow-md" style={{ WebkitTextStroke: '1px rgba(0,0,0,0.6)' }}>Learn French like a pro,</span>
+                <br className="hidden sm:block" />
+                <span className="text-yellow-300">speak it like a vibe.</span>
               </h1>
-              <p className="text-lg md:text-xl mb-8 text-white/90 max-w-xl">
-                Join our comprehensive French language programs and learn from A1 to C2 level with native teachers, interactive lessons, and personalized learning paths.
+              <p className="text-gray-900 text-base sm:text-lg md:text-xl font-medium max-w-xl leading-relaxed text-center sm:text-left mb-8">
+                More than a classroom—it’s a movement of ideas, accents, and self-expression.
+                From café convos to cinematic grammar glow-ups, we make every lesson feel like a vibe.
+                Your French story starts here—with 1,000 ideas and one unforgettable&nbsp;place.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button size="lg" asChild className="bg-white text-primary hover:bg-white/90 hover-lift">
                   <Link href="/courses">Explore Courses</Link>
                 </Button>
-                <Button size="lg" variant="outline" asChild className="border-white text-white hover:bg-white/20 gap-2 hover-lift">
+                {/* <Button size="lg" variant="default" asChild className="bg-primary text-white hover:bg-primary/90 hover-lift">
                   <Link href="/about"><FaPlay className="h-4 w-4" /> Watch Demo</Link>
-                </Button>
+                </Button> */}
               </div>
               <div className="mt-8 flex flex-wrap gap-6 items-center">
-                <div className="flex -space-x-2">
+                {/* <div className="flex space-x-2 sm:-space-x-2">
                   {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className={`w-10 h-10 rounded-full border-2 border-white overflow-hidden bg-gradient-to-r from-violet-500 to-indigo-500 flex items-center justify-center text-white font-bold`}>
+                    <div key={i} className={`w-10 h-10 rounded-full border-2 border-white overflow-hidden bg-primary flex items-center justify-center text-white font-bold`}>
                       {i}
                     </div>
                   ))}
-                </div>
-                <div className="text-white">
+                </div> */}
+                {/* <div className="text-white">
                   <div className="flex mb-1">
                     {[1, 2, 3, 4, 5].map((i) => (
                       <FaStar key={i} className="text-yellow-300 h-5 w-5" />
                     ))}
                   </div>
                   <p className="text-sm">Over 10,000 satisfied students</p>
-                </div>
+                </div> */}
               </div>
             </div>
             <div className="lg:w-1/2 flex justify-center">
               <div className="relative rounded-lg w-full max-w-lg">
                 <div className="rounded-xl overflow-hidden shadow-2xl animate-float">
                   <Image
-                    src="https://images.unsplash.com/photo-1527891751199-7225231a68dd?q=80&w=1740&auto=format&fit=crop"
+                    src="/images/Pondy_pic.jpg"
                     alt="Students learning French"
                     width={600}
                     height={400}
@@ -201,11 +222,16 @@ export default function Home() {
                 <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-lg p-4 max-w-xs animate-float" style={{ animationDelay: "1s" }}>
                   <div className="flex items-center gap-3 mb-2">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <FaGraduationCap className="h-5 w-5 text-primary" />
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-primary">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                      </svg>
                     </div>
                     <div>
-                      <h4 className="font-semibold text-sm">CEFR Aligned</h4>
-                      <p className="text-xs text-muted-foreground">Internationally recognized</p>
+                      <h4 className="font-semibold text-sm">Group Vibe Sessions</h4>
+                      <p className="text-xs text-muted-foreground"></p>
                     </div>
                   </div>
                 </div>
@@ -216,7 +242,7 @@ export default function Home() {
                     </div>
                     <div>
                       <h4 className="font-semibold text-sm">1-on-1 Sessions</h4>
-                      <p className="text-xs text-muted-foreground">Personalized attention</p>
+                      <p className="text-xs text-muted-foreground"></p>
                     </div>
                   </div>
                 </div>
@@ -227,32 +253,36 @@ export default function Home() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-12 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
+      <section ref={statsSectionRef} className="py-20 bg-gray-50 dark:bg-slate-900" data-reveal>
+        <div className="container mx-auto px-4 flex flex-col lg:flex-row items-center gap-12">
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-10">
             {stats.map((stat, index) => (
               <div key={index} className="text-center">
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4 mx-auto">
                   <div className="text-primary">{stat.icon}</div>
                 </div>
-                <h3 className="text-3xl md:text-4xl font-bold text-primary mb-1">{stat.value}</h3>
+                <h3 className="text-3xl md:text-4xl font-bold text-primary mb-1"><Counter end={stat.end} suffix={stat.suffix} start={statsVisible} /></h3>
                 <p className="text-muted-foreground text-sm">{stat.label}</p>
               </div>
             ))}
+          </div>
+          <div className="flex-1 hidden lg:block">
+            <Image src="/images/section-stats.jpg" alt="Students worldwide" width={600} height={400} className="rounded-xl shadow-lg object-cover" />
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-gradient-purple text-white">
+      <section className="py-20 bg-slate-800 text-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Choose French Institute</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Choose L'école Bibliothèque</h2>
             <p className="text-white/80 max-w-2xl mx-auto">
               We provide comprehensive French language education with the right balance of structured learning and practical application.
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="flex flex-col lg:flex-row-reverse items-center gap-12 w-full">
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
             {courseFeatures.map((feature, index) => (
               <div key={index} className="p-6 rounded-xl bg-white/10 backdrop-blur hover:bg-white/20 transition-all hover:-translate-y-1 duration-300">
                 <div className="mb-4 flex items-center justify-center w-16 h-16 rounded-full bg-white/10 mx-auto">
@@ -262,6 +292,10 @@ export default function Home() {
                 <p className="text-white/80 text-center">{feature.description}</p>
               </div>
             ))}
+          </div>
+          <div className="flex-1 hidden lg:block mb-10 lg:mb-0">
+            <Image src="/images/section-features.jpg" alt="Learning online" width={600} height={400} className="rounded-xl shadow-lg object-cover" />
+          </div>
           </div>
         </div>
       </section>
@@ -324,7 +358,7 @@ export default function Home() {
       </section>
 
       {/* Learning Process Section */}
-      <section className="py-20 bg-white dark:bg-black">
+      <section className="py-20 bg-slate-900 text-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <div className="inline-block text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full mb-4">
@@ -336,7 +370,7 @@ export default function Home() {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="bg-gray-50 dark:bg-slate-800 p-8 rounded-xl text-center hover-lift">
+            <div className="bg-gray-50 dark:bg-slate-800 p-8 rounded-xl text-center hover-lift flex flex-col items-center h-full">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-6">
                 <span className="text-2xl font-bold text-primary">1</span>
               </div>
@@ -345,7 +379,7 @@ export default function Home() {
                 Take our comprehensive placement test to determine your current level and get a personalized learning path.
               </p>
             </div>
-            <div className="bg-gray-50 dark:bg-slate-800 p-8 rounded-xl text-center hover-lift">
+            <div className="bg-gray-50 dark:bg-slate-800 p-8 rounded-xl text-center hover-lift flex flex-col items-center h-full">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-6">
                 <span className="text-2xl font-bold text-primary">2</span>
               </div>
@@ -354,7 +388,7 @@ export default function Home() {
                 Learn through live classes, self-paced modules, conversation practice, and regular assessments.
               </p>
             </div>
-            <div className="bg-gray-50 dark:bg-slate-800 p-8 rounded-xl text-center hover-lift">
+            <div className="bg-gray-50 dark:bg-slate-800 p-8 rounded-xl text-center hover-lift flex flex-col items-center h-full">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-6">
                 <span className="text-2xl font-bold text-primary">3</span>
               </div>
@@ -389,7 +423,7 @@ export default function Home() {
                   ))}
                 </div>
                 <p className="italic text-muted-foreground mb-6">
-                  "The French Institute's online course exceeded my expectations. I went from barely speaking a word to being able to hold conversations in just a few months. The teachers are wonderful!"
+                  "The L'école Bibliothèque's online course exceeded my expectations. I went from barely speaking a word to being able to hold conversations in just a few months. The teachers are wonderful!"
                 </p>
                 <div className="flex items-center">
                   <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mr-4">
@@ -411,7 +445,7 @@ export default function Home() {
                   ))}
                 </div>
                 <p className="italic text-muted-foreground mb-6">
-                  "I tried learning French through several apps before, but nothing compares to the structured approach of the French Institute. The interactive lessons and feedback from teachers made all the difference."
+                  "I tried learning French through several apps before, but nothing compares to the structured approach of the L'école Bibliothèque. The interactive lessons and feedback from teachers made all the difference."
                 </p>
                 <div className="flex items-center">
                   <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mr-4">
@@ -433,7 +467,7 @@ export default function Home() {
                   ))}
                 </div>
                 <p className="italic text-muted-foreground mb-6">
-                  "As a business professional who needed to relocate to Paris, the French Institute's C1 course prepared me perfectly for both professional and everyday communication. Highly recommended!"
+                  "As a business professional who needed to relocate to Paris, the L'école Bibliothèque's C1 course prepared me perfectly for both professional and everyday communication. Highly recommended!"
                 </p>
                 <div className="flex items-center">
                   <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mr-4">
@@ -451,7 +485,7 @@ export default function Home() {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20 bg-white dark:bg-black">
+      <section className="py-20 bg-slate-900 text-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <div className="inline-block text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full mb-4">
@@ -479,7 +513,7 @@ export default function Home() {
                   </Button>
                 </div>
                 {activeFAQ === index && (
-                  <p className="mt-4 text-muted-foreground">
+                  <p className="mt-4 text-muted-foreground whitespace-pre-line">
                     {faq.answer}
                   </p>
                 )}
@@ -490,7 +524,7 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-purple text-white">
+      <section className="py-20 text-white bg-primary">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Begin Your French Journey?</h2>
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
@@ -500,12 +534,19 @@ export default function Home() {
             <Button size="lg" asChild className="bg-white text-primary hover:bg-white/90 hover-lift">
               <Link href="/auth/register">Start Learning Now</Link>
             </Button>
-            <Button size="lg" variant="outline" asChild className="border-white text-white hover:bg-white/20 hover-lift">
+            <Button
+              size="lg"
+              variant="outline"
+              asChild
+              className="border-white text-white bg-transparent hover:bg-white/20 hover:text-primary-foreground hover-lift"
+            >
               <Link href="/contact">Get Course Advice</Link>
             </Button>
           </div>
         </div>
       </section>
+
     </MainLayout>
   );
 }
+

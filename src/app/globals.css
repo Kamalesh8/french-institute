@@ -2,18 +2,117 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Scroll reveal */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(1.5rem);
+  transition: opacity 0.7s ease-out, transform 0.7s ease-out;
+}
+[data-reveal="in"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Optimize font rendering */
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 224 71.4% 4.1%;
-    --card: 0 0% 100%;
-    --card-foreground: 224 71.4% 4.1%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 224 71.4% 4.1%;
-    --primary: 270 76% 53%; /* Vibrant purple similar to Byju's */
-    --primary-foreground: 210 20% 98%;
-    --secondary: 246 100% 65%; /* Secondary purple/blue */
-    --secondary-foreground: 220.9 39.3% 11%;
+  * {
+    @apply border-border;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* Optimize images */
+  img, svg, video, canvas, audio, iframe, embed, object {
+    display: inline-block;
+    vertical-align: middle;
+    max-width: 100%;
+    height: auto;
+  }
+  
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* Focus styles */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary/50 ring-offset-2 ring-offset-background;
+  }
+  
+  body {
+    @apply bg-gradient-to-r from-background to-card overflow-x-hidden;
+  }
+}
+
+/* Theme variables */
+:root {
+  /* French tricolor palette */
+  --primary: 210 100% 32%; /* Blue */
+  --primary-foreground: 210 20% 98%;
+  --secondary: 350 80% 50%; /* Darker red dark */
+  --secondary-foreground: 210 20% 98%;
+  --accent: 210 100% 32%;
+  --ring: 210 100% 32%;
+  --chart-1: 210 100% 32%;
+  --chart-2: 0 0% 100%;
+  --chart-3: 4 85% 57%; /* Red */
+  --chart-4: 210 30% 90%; /* Light */
+  --chart-5: 0 0% 50%; /* Neutral */
+
+  --background: 0 0% 100%;
+  --foreground: 224 71.4% 4.1%;
+  --card: 0 0% 100%;
+  --card-foreground: 224 71.4% 4.1%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 224 71.4% 4.1%;
+  --primary: 210 100% 32%; /* French Blue */
+  --primary-foreground: 210 20% 98%;
+  --secondary: 350 85% 45%; /* Darker French Red */
+  --secondary-foreground: 220.9 39.3% 11%;
+  --muted: 220 14.3% 95.9%;
+  --muted-foreground: 220 8.9% 46.1%;
+  --accent: 281 83% 40%; /* Accent purple */
+  --accent-foreground: 210 20% 98%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 20% 98%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 270 76% 53%;
+  --radius: 0.5rem;
+  --chart-1: 270 76% 53%; /* Purple */
+  --chart-2: 246 100% 65%; /* Lighter purple */
+  --chart-3: 197 100% 38%; /* Blue */
+  --chart-4: 337 100% 43%; /* Pink */
+  --chart-5: 168 67% 40%; /* Teal */
+}
+
+.dark {
+  --background: 224 71.4% 4.1%;
+  --foreground: 210 20% 98%;
+  --card: 224 71.4% 4.1%;
+  --card-foreground: 210 20% 98%;
+  --popover: 224 71.4% 4.1%;
+  --popover-foreground: 210 20% 98%;
+  --primary: 270 70% 60%; /* Vibrant purple for dark mode */
+  --primary-foreground: 210 20% 98%;
+  --secondary: 246 75% 60%; /* Secondary purple for dark mode */
+  --secondary-foreground: 210 20% 98%;
+  --muted: 215 27.9% 16.9%;
+  --muted-foreground: 217.9 10.6% 64.9%;
+  --accent: 281 75% 50%; /* Accent purple for dark mode */
+  --accent-foreground: 210 20% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 20% 98%;
+  --border: 215 27.9% 16.9%;
+  --input: 215 27.9% 16.9%;
+  --ring: 270 70% 60%;
+  --chart-1: 270 70% 60%; /* Purple */
+  --chart-2: 246 75% 60%; /* Lighter purple */
+  --chart-3: 197 78% 42%; /* Blue */
+  --chart-4: 337 85% 48%; /* Pink */
+  --chart-5: 168 67% 45%; /* Teal */
     --muted: 220 14.3% 95.9%;
     --muted-foreground: 220 8.9% 46.1%;
     --accent: 281 83% 40%; /* Accent purple */
@@ -53,18 +152,24 @@
     --ring: 270 70% 60%;
     --chart-1: 270 70% 60%; /* Purple */
     --chart-2: 246 75% 60%; /* Lighter purple */
-    --chart-3: 197 80% 50%; /* Blue */
-    --chart-4: 337 80% 55%; /* Pink */
-    --chart-5: 168 67% 50%; /* Teal */
+    --chart-3: 4 80% 60%; /* Red */
+    --chart-4: 210 30% 90%; /* Light */
+    --chart-5: 0 0% 50%; /* Neutral */
   }
-}
 
 @layer base {
   * {
     @apply border-border;
   }
+  /* Apply a subtle two-tone gradient background site-wide */
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background: linear-gradient(135deg, #f8fafc 0%, #e8edf3 100%);
+  }
+
+  /* Dark-mode variant */
+  .dark body {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   }
 }
 
@@ -74,11 +179,15 @@
 }
 
 .bg-gradient-purple {
-  @apply bg-gradient-to-r from-violet-700 to-indigo-600;
+  background-image: linear-gradient(to right, #002654 0%, #002654 33.33%, #ffffff 33.33%, #ffffff 66.66%, #C8102E 66.66%, #C8102E 100%);
+
+  
 }
 
 .bg-gradient-purple-light {
-  @apply bg-gradient-to-r from-violet-500 to-indigo-400;
+  background-image: linear-gradient(to right, #335d9e 0%, #335d9e 33.33%, #ffffff 33.33%, #ffffff 66.66%, #d94a4a 66.66%, #d94a4a 100%);
+
+  
 }
 
 /* Button and interactive elements hover effects */

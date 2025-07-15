@@ -1,4 +1,4 @@
-import { db, storage } from '@/config/firebase';
+﻿import { db, storage } from '@/config/firebase';
 import type { Certificate } from '@/lib/types';
 import {
   collection,
@@ -276,3 +276,4 @@ export const verifyCertificate = async (certificateId: string) => {
     return { isValid: false, message: 'Error verifying certificate' };
   }
 };
+

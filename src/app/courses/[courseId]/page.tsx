@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -32,12 +34,42 @@ import {
 
 // Sample course images based on level
 const COURSE_IMAGES = {
-  "A1": "https://images.unsplash.com/photo-1505902987837-9e40ec37e607?q=80&w=1740&auto=format&fit=crop",
-  "A2": "https://images.unsplash.com/photo-1549737221-bef65e2604a6?q=80&w=1740&auto=format&fit=crop",
-  "B1": "https://images.unsplash.com/photo-1503917988258-f87a78e3c995?q=80&w=1740&auto=format&fit=crop",
-  "B2": "https://images.unsplash.com/photo-1563293756-4ee5996e3a78?q=80&w=1740&auto=format&fit=crop",
-  "C1": "https://images.unsplash.com/photo-1488190211105-8b0e65b80b4e?q=80&w=1740&auto=format&fit=crop",
-  "C2": "https://images.unsplash.com/photo-1599753894977-834afcf35d32?q=80&w=1740&auto=format&fit=crop",
+  "A1": {
+    src: "/images/a1-beginner.jpg",
+    width: 1974,
+    height: 1316,
+    alt: "A1 Level Course"
+  },
+  "A2": {
+    src: "/images/a2-elementary.jpg",
+    width: 1974,
+    height: 1316,
+    alt: "A2 Level Course"
+  },
+  "B1": {
+    src: "/images/b1-intermediate.jpg",
+    width: 1974,
+    height: 1316,
+    alt: "B1 Level Course"
+  },
+  "B2": {
+    src: "/images/b1-intermediate.jpg",
+    width: 1974,
+    height: 1316,
+    alt: "B2 Level Course"
+  },
+  "C1": {
+    src: "/images/c1-advanced.jpg",
+    width: 1974,
+    height: 1316,
+    alt: "C1 Level Course"
+  },
+  "C2": {
+    src: "/images/c2-proficient.jpg",
+    width: 1974,
+    height: 1316,
+    alt: "C2 Level Course"
+  }
 };
 
 export default function CourseDetailPage({ params }: { params: { courseId: string } }) {
@@ -140,11 +172,18 @@ export default function CourseDetailPage({ params }: { params: { courseId: strin
         <div className="h-[350px] overflow-hidden relative">
           <div className="absolute inset-0 bg-black/40 z-10"></div>
           <Image
-            src={COURSE_IMAGES[course.level] || COURSE_IMAGES.A1}
-            alt={course.title}
-            fill
+            src={COURSE_IMAGES[course.level]?.src || COURSE_IMAGES.A1.src}
+            alt={course.title || COURSE_IMAGES[course.level]?.alt || "Course Image"}
+            width={COURSE_IMAGES[course.level]?.width || 1200}
+            height={COURSE_IMAGES[course.level]?.height || 800}
             className="object-cover"
             priority
+            quality={80}
+            onError={(e) => {
+              const img = e.target as HTMLImageElement;
+              img.src = COURSE_IMAGES.A1.src; // Fallback to A1 image if loading fails
+            }}
+            loading="eager"
           />
           <div className="absolute inset-0 z-20 flex items-center">
             <div className="container">
@@ -552,3 +591,4 @@ export default function CourseDetailPage({ params }: { params: { courseId: strin
     </MainLayout>
   );
 }
+

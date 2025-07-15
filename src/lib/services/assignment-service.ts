@@ -1,4 +1,4 @@
-import {
+﻿import {
   collection,
   doc,
   getDoc,
@@ -155,3 +155,4 @@ export const gradeSubmission = async (
     throw error;
   }
 };
+

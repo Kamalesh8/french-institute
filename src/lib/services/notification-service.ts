@@ -1,4 +1,4 @@
-import { db } from '@/config/firebase';
+﻿import { db } from '@/config/firebase';
 import type { Notification } from '@/lib/types';
 import {
   collection,
@@ -294,3 +294,4 @@ export const createMessageNotification = async (
     throw error;
   }
 };
+

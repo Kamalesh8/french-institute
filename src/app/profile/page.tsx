@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from 'next-auth/react';
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -46,7 +47,9 @@ const formSchema = z.object({
 });
 
 export default function ProfilePage() {
+  const { data: session, status } = useSession();
   const { user, updateUserProfile } = useAuth();
+  const currentUser: any = user || (status === 'authenticated' ? { ...session.user, uid: (session.user as any).id, role: (session.user as any).role } : null);
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -94,7 +97,7 @@ export default function ProfilePage() {
     };
 
     fetchUserData();
-  }, [user, router, form, toast]);
+  }, [currentUser, router, form, toast]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) return;
@@ -103,10 +106,12 @@ export default function ProfilePage() {
 
     try {
       // Update user profile in Firebase Auth
-      await updateUserProfile(values.displayName);
+      if (updateUserProfile) {
+        await updateUserProfile(values.displayName);
+      }
 
       // Update additional user data in Firestore
-      const userRef = doc(db, "users", user.uid);
+      const userRef = doc(db, "users", currentUser.uid);
       await updateDoc(userRef, {
         phoneNumber: values.phoneNumber,
         address: values.address,
@@ -262,3 +267,4 @@ export default function ProfilePage() {
     </MainLayout>
   );
 }
+

@@ -1,51 +1,106 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import { getAuth, connectAuthEmulator, Auth } from "firebase/auth";
+import { getFirestore, connectFirestoreEmulator, Firestore } from "firebase/firestore";
+import { getStorage, connectStorageEmulator, FirebaseStorage } from "firebase/storage";
 
-// Check if we're in a browser environment
-const isBrowser = typeof window !== 'undefined';
+// Demo mode configuration
+// Demo mode disabled by default; enable by setting NEXT_PUBLIC_DEMO_MODE=true
+export const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyA_DEMO_KEY_FOR_DEVELOPMENT",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "demo-project.firebaseapp.com",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "demo-project",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "demo-project.appspot.com",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "123456789012",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789012:web:abcdef1234567890",
+// Firebase configuration
+export const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || '',
 };
 
-// Log config in development but not in production (excluding sensitive info)
-if (process.env.NODE_ENV !== 'production' && isBrowser) {
-  console.log("Firebase config (development):", {
-    ...firebaseConfig,
-    apiKey: firebaseConfig.apiKey ? "PRESENT" : "MISSING", // Don't log actual key
-    appId: firebaseConfig.appId ? "PRESENT" : "MISSING",   // Don't log actual ID
+// Firebase services
+let firebaseApp: FirebaseApp | null = null;
+// Explicitly export placeholders so other modules can perform type-safe imports.
+export let auth: Auth | null = null;
+export let db: Firestore | null = null;
+export let storage: FirebaseStorage | null = null;
+
+// Initialize Firebase (works in both browser and server environments)
+try {
+  firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  auth = getAuth(firebaseApp);
+  db = getFirestore(firebaseApp);
+  storage = getStorage(firebaseApp);
+
+    // Configure persistence and other settings
+    // Note: Offline persistence is commented out because it requires async and we are in a synchronous context.
+    // If you want to enable it, you must do it asynchronously and handle the promise appropriately.
+    // But note: we are in a synchronous context here, so we cannot use async/await.
+    // If you want to enable offline persistence, you might need to do it in a separate async function and call it from a component.
+    /*
+    if (db) {
+      enableIndexedDbPersistence(db).catch((err) => {
+        if (err.code === 'failed-precondition') {
+          console.warn('Offline persistence can only be enabled in one tab at a time.');
+        } else if (err.code === 'unimplemented') {
+          console.warn('The current browser doesn\'t support offline persistence.');
+        }
+      });
+    }
+    */
+    
+    // Connect to emulators if enabled
+    const useEmulators = process.env.NEXT_PUBLIC_USE_EMULATORS === 'true';
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    if (isDevelopment && useEmulators) {
+      try {
+        if (auth) connectAuthEmulator(auth, 'http://localhost:9099');
+        if (db) connectFirestoreEmulator(db, 'localhost', 8080);
+        if (storage) connectStorageEmulator(storage, 'localhost', 9199);
+        console.log('Connected to Firebase emulators');
+      } catch (error) {
+        console.warn('Failed to connect to Firebase emulators:', error);
+      }
+    } else if (isDemoMode) {
+      console.warn('Running in demo mode. Emulators are not connected.');
+    }
+
+    console.log('Firebase initialized successfully');
+
+  } catch (error) {
+    console.error('Error initializing Firebase:', error);
+  }
+
+export const getFirebaseAuth = (): Auth => {
+  if (!auth) {
+    throw new Error('Firebase auth not initialized');
+  }
+  return auth;
+};
+
+export const getFirestoreDb = (): Firestore => {
+  if (!db) {
+    throw new Error('Firestore not initialized');
+  }
+  return db;
+};
+
+export const getFirebaseStorage = (): FirebaseStorage => {
+  if (!storage) {
+    throw new Error('Firebase storage not initialized');
+  }
+  return storage;
+};
+
+// Log configuration in development
+if (process.env.NODE_ENV !== 'production' && typeof window !== 'undefined') {
+  console.log('Firebase Config:', {
+    projectId: firebaseConfig.projectId,
+    authDomain: firebaseConfig.authDomain,
+    isDemoMode,
+    usingEmulator: process.env.NEXT_PUBLIC_USE_EMULATORS === 'true',
+    environment: process.env.NODE_ENV
   });
 }
 
-// Initialize Firebase
-let app;
-let auth;
-let db;
-let storage;
-
-try {
-  // Initialize Firebase
-  app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-  auth = getAuth(app);
-  db = getFirestore(app);
-  storage = getStorage(app);
-} catch (error) {
-  console.error("Firebase initialization error:", error);
-
-  // Still define the variables to prevent further errors, but they won't work
-  if (!app) app = {} as any;
-  if (!auth) auth = {} as any;
-  if (!db) db = {} as any;
-  if (!storage) storage = {} as any;
-}
-
-export { app, auth, db, storage };
